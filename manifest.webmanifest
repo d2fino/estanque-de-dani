@@ -1,7 +1,7 @@
 {
   "name": "El Estanque de Dani",
   "short_name": "Estanque",
-  "description": "Nada como un koi en el estanque de Dani: come, crece y esquiva a la tortuga.",
+  "description": "El estanque de Dani: nada como un koi, en 2D o en 3D.",
   "lang": "es",
   "start_url": "./",
   "scope": "./",
