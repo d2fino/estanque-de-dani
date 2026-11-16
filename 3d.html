@@ -91,6 +91,8 @@ body{background:var(--water);color:var(--paper);font-family:var(--body);overflow
 .pick small{opacity:.65;font-size:11px}
 .pick[aria-pressed="true"]{border-color:var(--koi);background:rgba(216,54,31,.22)}
 .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.pick.role{grid-template-columns:1fr;flex:1 1 150px;padding:10px 12px}
+.pick.role span{font-family:var(--display);font-weight:800;font-size:17px}
 #go{font:700 15px var(--body);background:var(--koi);border:0;color:#fff;padding:12px 22px;border-radius:4px;cursor:pointer}
 #nogl{position:fixed;inset:0;display:grid;place-items:center;padding:24px;text-align:center;font-size:16px;line-height:1.5}
 @media (pointer:coarse){#hintKeys{display:none}}
@@ -121,7 +123,7 @@ body{background:var(--water);color:var(--paper);font-family:var(--body);overflow
   <div id="side">
     <div class="card" id="counts"><span>Vidas<b id="cLives">3</b></span><span>Pienso<b id="cPellet">0</b></span><span>Pipas<b id="cSeed">0</b></span></div>
     <button class="btn" id="camBtn" type="button">Cámara: ojos del pez</button>
-    <button class="btn" id="swap" type="button">Cambiar de pez</button>
+    <button class="btn" id="swap" type="button">Cambiar de personaje</button>
     <button class="btn" id="sound" type="button" aria-pressed="false">Activar sonido</button>
   </div>
   <div class="card" id="stam">Impulso<i><span id="stamBar"></span></i></div>
@@ -136,7 +138,12 @@ body{background:var(--water);color:var(--paper);font-family:var(--body);overflow
 <div id="intro">
   <div class="box">
     <h2><small>Bajo el agua · 3D</small>El Estanque de Dani</h2>
-    <p>Sumérgete y mira el estanque con los ojos de un koi. Empiezas de alevín: come el pienso que cae desde la superficie y las pipas de la pirrura para crecer. La tortuga caza a los peces pequeños, y Maxi la espanta a ladridos desde el borde.</p>
+    <p>Sumérgete en el estanque y elige con quién: un koi que come y crece esquivando a la tortuga, la tortuga que persigue a los peces pequeños, o la pirrura, que reparte pipas y recorre el jardín volando. Isabella echa el pienso desde el borde y Maxi vigila.</p>
+    <div class="row" id="roles" role="group" aria-label="Personaje">
+      <button class="pick role" type="button" id="role-fish" data-role="fish" aria-pressed="true"><span>Pez koi</span><small>come, crece y esquiva a la tortuga</small></button>
+      <button class="pick role" type="button" id="role-turtle" data-role="turtle" aria-pressed="false"><span>Tortuga</span><small>persigue a los peces pequeños</small></button>
+      <button class="pick role" type="button" id="role-bird" data-role="bird" aria-pressed="false"><span>Pirrura</span><small>reparte pipas y explora el jardín</small></button>
+    </div>
     <div id="picks"></div>
     <div class="row"><button id="go" type="button">Sumergirse</button><button class="btn" id="reset" type="button" hidden>Empezar desde el nivel 1</button><a class="btn" href="./" style="text-decoration:none">Cambiar de juego</a></div>
   </div>
@@ -159,6 +166,7 @@ const D = 3.6;                                    // pond depth
 const POND = [[-9.5,-5.2],[9.5,-5.2],[9.5,2.3],[5.9,5.2],[-9.5,5.2]];
 const ISL = { x: -3.8, z: -.3, rx: 1.75, rz: 1.75 };
 const BUD = { x: -2.65, z: .5 }, TREE = { x: -4.75, z: -1.05 };
+const FEED = { x: 2.5, y: 1.55, z: 9.6 };   // the pirrura's seed bowl on the terrace
 const AER = { x: 3.6, y: -1.6, z: -1.6 }, FALL = { x: -8.75, y: -.8, z: -3.65 };
 const EDGES = POND.map((a, i) => { const b = POND[(i + 1) % POND.length]; const dx = b[0]-a[0], dz = b[1]-a[1], l = hyp(dx, dz); return { ax: a[0], az: a[1], bx: b[0], bz: b[1], nx: -dz / l, nz: dx / l, l }; });
 function confine(o, m){
@@ -290,8 +298,8 @@ void main(){
   else if(uMode==105){ N=normalize(N+(vec3(vnoise(q*8.),vnoise(q*8.+31.),vnoise(q*8.+57.))-.5)*1.5); float n=fbm(q*2.5+vW.z); vec3 v=voro3(q*5.+vW.z*3.); alb=vC*(.42+1.15*n)*(.55+.7*v.x); alb+=vC*.6*step(.92,v.z); }
   else if(uMode==6){ alb=vC*(.82+.36*fbm(q*4.)); }
   else if(uMode==7){ vec3 v=voro3(vO.xz*6.5); float rim=smoothstep(.10,.01,vO.y);
-    alb=mix(vec3(.07,.17,.05),vec3(.22,.36,.12),v.x*1.3); alb*=smoothstep(0.,.10,v.y); alb+=vec3(.18,.28,.09)*smoothstep(.07,0.,abs(v.x-.28))*.6;
-    alb=mix(alb,vec3(.42,.28,.07)*(.6+.5*smoothstep(0.,.1,v.y)),rim); spec=.6; gloss=50.; }
+    alb=mix(vec3(.05,.045,.025),vec3(.20,.17,.07),v.x*1.3)*(.7+.6*fbm(vO.xz*14.)); alb*=smoothstep(0.,.10,v.y); alb+=vec3(.40,.30,.08)*smoothstep(.06,0.,abs(v.x-.28))*.7;
+    alb=mix(alb,vec3(.62,.42,.07)*(.6+.5*smoothstep(0.,.1,v.y)),rim); spec=.6; gloss=50.; }
   else if(uMode==8){ spec=1.6; gloss=90.; }
   vec3 col=lightAt(vW,N,alb,spec,gloss);
   gl_FragColor=vec4(fogged(col,vW),1.);
@@ -339,6 +347,7 @@ function add(parts, mode, parent){ const m = new THREE.Mesh(geo(parts), mat(mode
   add([{ g: new THREE.TorusGeometry(1, .035, 6, 44), m: M(ISL.x, .3, ISL.z, ISL.rx, ISL.rz, 4, Math.PI / 2, 0, 0), c: [.02, .025, .03] }], 6);
   add([{ g: sph(10), m: M(-1.7, -D + .15, -3.7, .6, .3, .4), c: hex('#8f8a57') }, { g: sph(10), m: M(6.2, -D + .1, 2.2, .45, .22, .5), c: hex('#7d7a52') }], 6);
   if (gl2) add([{ g: box(), m: M(8.3, .1, -4.75, 2.6, .8, 1.3) }], 2);   // stone ledge under the scanned waterfall
+  add([{ g: cyl(.09, .12, 8), m: M(FEED.x, .95, FEED.z, 1, 1, 1), c: hex('#6b4a2c') }, { g: cyl(.5, .3, 16), m: M(FEED.x, 1.38, FEED.z, 1, .22, 1), c: hex('#b9623c') }, { g: cyl(.44, .44, 16), m: M(FEED.x, 1.47, FEED.z, 1, .04, 1), c: hex('#2a251f') }], 6);
   // hedge behind the wall, cypress row, house wall
   const hedge = [], gc = ['#2a5a26', '#356b2c', '#234d22', '#3f7a33'];
   for (let x = -14; x <= 14; x += 2.1) hedge.push({ g: sph(10), m: M(x + r(), 2.6 + r() * .8, -7.6 - r(), 2 + r() * .6, 2.4 + r(), 1.6 + r() * .5), c: hex(gc[r() * 4 | 0]) });
@@ -509,9 +518,10 @@ const headOf = (f, out) => { const L = f.len * f.grow * .46, cp = Math.cos(f.pit
 
 /* ---------- tortuga ---------- */
 const turtle = { x: -2.7, y: .5, z: -.9, h: -.4, sp: 0, phase: 0, stun: 0, scared: 0, lunge: 0, lungeCd: 0, tx: 2, ty: -2, tz: 1, timer: 0, chasing: false, awake: false, g: new THREE.Group(), legs: [] };
-(function(){ const g = turtle.g, skin = hex('#5d6e55');
+(function(){ const g = turtle.g, skin = hex('#2f3b2a');
   const shell = new THREE.Mesh(geo([{ g: sph(22), m: M(0, .0, 0, .52, .3, .43) }]), envMat(7)); shell.layers.enable(1); g.add(shell);
-  add([{ g: sph(14), m: M(0, -.05, 0, .49, .13, .40), c: hex('#b79a4a') }, { g: sph(10), m: M(.56, -.02, 0, .17, .11, .13), c: hex('#6f8060') }, { g: sph(8), m: M(.42, -.04, 0, .16, .09, .1), c: skin },
+  add([{ g: sph(14), m: M(0, -.05, 0, .49, .13, .40), c: hex('#e0a93a') }, { g: sph(10), m: M(.56, -.02, 0, .17, .11, .13), c: hex('#3f4d33') }, { g: sph(6), m: M(.53, .02, .115, .06, .03, .02), c: hex('#b8402a') }, { g: sph(6), m: M(.53, .02, -.115, .06, .03, .02), c: hex('#b8402a') },
+    { g: sph(6), m: M(.62, -.05, .09, .1, .012, .02), c: hex('#d8c84a') }, { g: sph(6), m: M(.62, -.05, -.09, .1, .012, .02), c: hex('#d8c84a') }, { g: sph(6), m: M(.64, .075, 0, .1, .012, .02), c: hex('#d8c84a') }, { g: sph(8), m: M(.42, -.04, 0, .16, .09, .1), c: skin },
     { g: new THREE.ConeGeometry(.05, .26, 6), m: M(-.6, -.05, 0, 1, 1, 1, 0, 0, Math.PI / 2), c: skin }], 6, g);
   add([{ g: sph(6), m: M(.63, .03, .09, .028), c: [.005, .005, .005] }, { g: sph(6), m: M(.63, .03, -.09, .028), c: [.005, .005, .005] }], 8, g);
   for (const [x, z, s] of [[.3, .36, 1], [.3, -.36, -1], [-.3, .34, 1], [-.3, -.34, -1]]){ const leg = new THREE.Group(); leg.position.set(x, -.06, z);
@@ -542,8 +552,27 @@ const maxi = { s: 7, x: -2, y: .45, z: 6.4, a: -1.57, ta: -1.57, ts: 7, timer: 3
   g.scale.setScalar(1.25); scene.add(g);
 })();
 
+/* ---------- Isabella: feeds the fish from the terrace edge, and the pirrura rides on her shoulder ---------- */
+const isa = { x: -2, y: .45, z: 7.05, a: -1.57, ta: -1.57, tx: -2, timer: 4, throwT: 0, phase: 0, walk: false, g: new THREE.Group(), arm: new THREE.Group(), legs: [] };
+(function(){ const g = isa.g, skin = hex('#b9794f'), hair = hex('#3b2618'), top = hex('#f2f0ea'), blue = hex('#6f9fd0'), dark = [.01, .008, .006];
+  for (const z of [.2, -.2]){ const leg = new THREE.Group(); leg.position.set(0, 1.9, z); add([{ g: cyl(.14, .11, 10), m: M(0, -.85, 0, 1, 1.7, 1), c: skin }, { g: box(), m: M(.08, -1.8, 0, .46, .2, .22), c: top }], 6, leg); g.add(leg); isa.legs.push(leg); }
+  add([{ g: cyl(.34, .4, 14), m: M(0, 2.1, 0, 1, .62, 1.12), c: blue }, { g: sph(14), m: M(0, 2.95, 0, .3, .72, .42), c: top }, { g: cyl(.1, .11, 8), m: M(0, 3.62, 0, 1, .22, 1), c: skin },
+    { g: sph(16), m: M(.02, 4.0, 0, .34, .37, .33), c: skin }, { g: sph(14), m: M(-.07, 4.08, 0, .36, .36, .37), c: hair }, { g: sph(12), m: M(-.3, 3.3, 0, .16, .95, .36), c: hair },
+    { g: sph(8), m: M(-.12, 3.6, .3, .14, .7, .1), c: hair }, { g: sph(8), m: M(-.12, 3.6, -.3, .14, .7, .1), c: hair }, { g: sph(10), m: M(0, 2.85, -.5, .1, .62, .1), c: skin }], 6, g);
+  add([{ g: sph(6), m: M(.33, 4.03, .12, .035), c: dark }, { g: sph(6), m: M(.33, 4.03, -.12, .035), c: dark }], 8, g);
+  isa.arm.position.set(0, 3.38, .5); add([{ g: sph(10), m: M(0, -.52, 0, .1, .6, .1), c: skin }], 6, isa.arm); g.add(isa.arm);
+  scene.add(g);
+})();
+const isaPerch = { x: 0, y: 4.1, z: 0, r: 2.9 };
+function updateIsa(dt){ const m = isa; m.timer -= dt; m.throwT -= dt;
+  if (m.throwT <= 0){ if (m.timer <= 0){ m.tx = -7 + Math.random() * 10.5; m.timer = 6 + Math.random() * 8; }
+    const d = m.tx - m.x; if (Math.abs(d) > .15){ m.x += clamp(d, -1, 1) * 1.3 * dt; m.walk = true; m.phase += dt * 7; m.ta = d > 0 ? 0 : Math.PI; } else { m.walk = false; m.ta = -Math.PI / 2; } }
+  else { m.walk = false; m.ta = -Math.PI / 2; }
+  m.a += angDiff(m.ta, m.a) * Math.min(1, dt * 6);
+  isaPerch.x = m.x + .5 * Math.sin(m.a); isaPerch.z = m.z - .5 * Math.cos(m.a); }
+
 /* ---------- pirrura ---------- */
-const PERCH = [{ x: ISL.x + .2, y: 2.4, z: ISL.z + .3, r: 3.4 }, { x: .5, y: .45, z: 5.6, r: 2.6 }, { x: 8.1, y: .45, z: 3.95, r: 2.6 }, { x: 2.2, y: 1.9, z: -5.55, r: 2.6 }, { x: 9.92, y: .45, z: -1.1, r: 2.6 }, { x: -10, y: 1.98, z: -3.65, r: 2.8 }];
+const PERCH = [{ x: ISL.x + .2, y: 2.4, z: ISL.z + .3, r: 3.4 }, isaPerch, { x: 8.1, y: .45, z: 3.95, r: 2.6 }, { x: 2.2, y: 1.9, z: -5.55, r: 2.6 }, { x: 9.92, y: .45, z: -1.1, r: 2.6 }, { x: -10, y: 1.98, z: -3.65, r: 2.8 }];
 const bird = { x: PERCH[0].x, y: PERCH[0].y, z: PERCH[0].z, a: 1.2, flap: 0, perch: 0, from: null, to: null, t: 0, dur: 1, wait: 9, cool: 0, g: new THREE.Group(), wings: [] };
 (function(){ const g = bird.g, ol = hex('#93a336'), ye = hex('#c9c23c'), cr = hex('#dcc8a2');
   add([{ g: sph(12), m: M(0, .2, 0, .24, .15, .14, 0, 0, .35), c: ol }, { g: sph(10), m: M(.03, .16, 0, .2, .13, .15, 0, 0, .35), c: ye }, { g: sph(12), m: M(.2, .36, 0, .12), c: cr },
@@ -552,6 +581,7 @@ const bird = { x: PERCH[0].x, y: PERCH[0].y, z: PERCH[0].z, a: 1.2, flap: 0, per
   add([{ g: sph(6), m: M(.25, .39, .1, .028), c: [.9, .9, .85] }, { g: sph(6), m: M(.25, .39, -.1, .028), c: [.9, .9, .85] }, { g: sph(5), m: M(.262, .39, .115, .016), c: [.005, .005, .005] }, { g: sph(5), m: M(.262, .39, -.115, .016), c: [.005, .005, .005] }], 8, g);
   for (const s of [-1, 1]){ const w = new THREE.Group(); w.position.set(.02, .26, s * .1);
     add([{ g: sph(8), m: M(-.06, 0, s * .2, .16, .02, .22), c: hex('#8fa43a') }, { g: sph(7), m: M(-.12, 0, s * .34, .12, .016, .14), c: hex('#5f86a8') }], 6, w); w.userData.s = s; g.add(w); bird.wings.push(w); }
+  bird.seed = add([{ g: sph(8), m: M(.16, .02, 0, .1, .045, .055), c: hex('#2a251f') }], 6, g); bird.seed.visible = false;
   g.scale.setScalar(1.5); scene.add(g);
 })();
 
@@ -657,8 +687,8 @@ function dropFood(x, z, kind, from){ const o = { x, z }; confine(o, .28); if (fo
   const mesh = new THREE.Mesh(kind === 'seed' ? seedGeo : foodGeo, mat(6)); mesh.scale.setScalar(kind === 'seed' ? .075 : .06); scene.add(mesh);
   const f = { x: o.x, y: from ? from.y : 1.6 + Math.random() * .8, z: o.z, kind, mesh, state: 0, t: 0, delay: 0, fx: from ? from.x : o.x, fz: from ? from.z : o.z, fy: from ? from.y : 0, float: 5 + Math.random() * 8, spin: Math.random() * 6 };
   food.push(f); return f; }
-function handful(){ const c0 = { x: -7.8 + Math.random() * 15.6, z: -4.1 + Math.random() * 8.2 }; confine(c0, .9); const n = 8 + Math.random() * 6 | 0;
-  for (let i = 0; i < n; i++){ const a = Math.random() * TAU, d = Math.sqrt(Math.random()) * 1.5, f = dropFood(c0.x + Math.cos(a) * d, c0.z + Math.sin(a) * d, 'pellet'); if (f) f.delay = Math.random() * .7; } }
+function handful(){ const c0 = { x: isa.x + (Math.random() - .5) * 5, z: 4.2 - Math.random() * 4.5 }; confine(c0, .9); const n = 8 + Math.random() * 6 | 0; isa.throwT = 1.3;   // Isabella throws it from the edge
+  for (let i = 0; i < n; i++){ const a = Math.random() * TAU, d = Math.sqrt(Math.random()) * 1.5, f = dropFood(c0.x + Math.cos(a) * d, c0.z + Math.sin(a) * d, 'pellet', { x: isa.x, y: 3.3, z: isa.z - .6 }); if (f) f.delay = .35 + Math.random() * .5; } }
 let ripI = 0;
 function ripple(x, z, str = 1){ U.uRip.value[ripI++ % 8].set(x, z, U.uTime.value, str); }
 
@@ -719,7 +749,7 @@ addEventListener('resize', resize); resize();
 const school = [], order = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 9], R0 = mulberry(1234);
 order.forEach((ti, i) => { const o = { x: -8 + R0() * 16, z: -4.3 + R0() * 8.8 }; confine(o, .6); const f = makeFish(TYPES[ti], o.x, o.z, R0() * TAU, i + 1); if (i > 9) f.len *= .85; school.push(f); });
 const START = .7, BIG = 1.3;
-let player = null, sel = 'kohaku', playing = false, camMode = 'fpv';
+let player = null, fishP = null, role = 'fish', catches = 0, delivered = 0, carrying = false, sel = 'kohaku', playing = false, camMode = 'fpv';
 let eaten = 0, seeds = 0, level = 0, lives = 3, inv = 0, dash = 0, stamina = 1, feedT = 1.5, time = 0, moved = false, night = 0, banT = 0, lv = null, hit = 0, camT = 9;
 function newLv(){ lv = { g: 0, eaten: 0, seeds: 0, bub: false, fall: false, lap: 0, lapA: null, scare: false, flies: 0 }; }
 newLv();
@@ -736,7 +766,7 @@ const G = {
   fly: n => ({ k: 'fly', text: () => `Atrapa ${n} luciérnagas de las que brillan junto a la superficie. Llevas ${Math.min(lv.flies, n)}.`, done: () => lv.flies >= n, at: () => flies[0] || null }),
 };
 const LEVELS = [
-  { name: 'Primeras bolitas', intro: 'La tortuga duerme en la isla. Come tranquilo.', tsp: 0, goals: [G.eat(6), G.seed(1)] },
+  { name: 'Primeras bolitas', intro: 'Isabella echa el pienso desde el borde. La tortuga duerme en la isla.', tsp: 0, goals: [G.eat(6), G.seed(1)] },
   { name: 'La tortuga despierta', intro: 'Caza a los peces pequeños. Cambia de rumbo: ella gira despacio.', tsp: 1.18, goals: [G.bub(), G.fall(), G.eat(8)] },
   { name: 'Maxi al rescate', intro: 'Maxi sigue a la tortuga desde la terraza y le ladra si se acerca al borde.', tsp: 1.32, goals: [G.lap(), G.maxi()] },
   { name: 'Pipas para todos', intro: 'La tortuga ya nada más deprisa.', tsp: 1.46, goals: [G.seed(3), G.eat(12)] },
@@ -744,21 +774,29 @@ const LEVELS = [
   { name: 'Noche de luciérnagas', intro: 'Ha caído la noche sobre el estanque.', tsp: 1.68, night: 1, goals: [G.fly(8)] },
 ];
 const FREE = { name: 'Estanque en calma', intro: 'Has superado los seis niveles.', tsp: 1.4, goals: [] };
-const curLevel = () => LEVELS[level] || FREE;
+const ROLE_LV = {
+  turtle: { name: 'Tortuga al acecho', intro: 'Atrapa a los peces pequeños. Maxi te ladra si te acercas a su borde.', tsp: 1, goals: [{ k: 'hunt', done: () => false,
+    text: () => `Atrapa a los peces pequeños: Calicó, Tancho y los Cometas. Los koi grandes se te escapan. Llevas ${catches}.`,
+    at: () => { let b = null, bd = 1e9; for (const f of school){ if (f.gone > 0 || f.len * f.grow >= 1.18) continue; const d = hyp(f.x - player.x, f.z - player.z); if (d < bd){ bd = d; b = f; } } return b; } }] },
+  bird: { name: 'Reparto de pipas', intro: 'Coge pipas del comedero de la terraza y suéltalas sobre el agua.', tsp: 1.3, goals: [{ k: 'deliver', done: () => false,
+    text: () => carrying ? `Llevas una pipa: vuela sobre el estanque y suéltala con el botón Soltar o Espacio. Entregadas: ${delivered}.` : `Vuela al comedero de la terraza a por una pipa. Entregadas: ${delivered}. También puedes recorrer el jardín.`,
+    at: () => carrying ? { x: 1.5, y: .3, z: .5 } : FEED }] },
+};
+const curLevel = () => role !== 'fish' ? ROLE_LV[role] : (LEVELS[level] || FREE);
 const goalKey = () => { const g = curLevel().goals[lv.g]; return g ? g.k : ''; };
 let lastQ = '';
 function hudSync(){
   const L = curLevel(), g = L.goals[lv.g], q = g ? g.text() : 'Has superado los seis niveles. El estanque es tuyo: nada a tu aire.';
   if (q !== lastQ){ lastQ = q; $('questText').textContent = q; }
-  $('questStep').textContent = level < LEVELS.length ? `Nivel ${level + 1} de ${LEVELS.length} · ${L.name}` : L.name;
+  $('questStep').textContent = role === 'fish' && level < LEVELS.length ? `Nivel ${level + 1} de ${LEVELS.length} · ${L.name}` : L.name;
   $('cLives').textContent = lives; $('cPellet').textContent = eaten; $('cSeed').textContent = seeds; $('stamBar').style.transform = `scaleX(${stamina})`;
   $('sprint').classList.toggle('empty', stamina < .05);
 }
 function banner(t, s, secs = 3.2){ $('banTitle').textContent = t; $('banText').textContent = s; $('banner').classList.remove('off'); banT = secs; }
 let saved = {};
 try { saved = JSON.parse(localStorage.getItem('dani-pond-3d') || '{}') || {}; } catch (e) { saved = {}; }
-function save(){ try { localStorage.setItem('dani-pond-3d', JSON.stringify({ level, eaten, seeds, grow: player ? player.grow : START })); } catch (e) {} }
-function levelBanner(){ const L = curLevel(); banner(level < LEVELS.length ? `Nivel ${level + 1} · ${L.name}` : L.name, L.intro, 4.5); }
+function save(){ try { localStorage.setItem('dani-pond-3d', JSON.stringify({ level, eaten, seeds, grow: fishP ? fishP.grow : START })); } catch (e) {} }
+function levelBanner(){ const L = curLevel(); banner(role === 'fish' && level < LEVELS.length ? `Nivel ${level + 1} · ${L.name}` : L.name, L.intro, 4.5); }
 function checkGoals(){
   const L = curLevel(), g = L.goals[lv.g]; if (!g || !g.done()) return;
   lv.g++; ripple(player.x, player.z, 1.5); chirp();
@@ -795,12 +833,18 @@ canvas.addEventListener('pointerdown', e => { if (!playing) return; ptr = { id: 
 canvas.addEventListener('pointermove', e => { if (ptr && e.pointerId === ptr.id){ ptr.x = e.clientX; ptr.y = e.clientY; const dx = clamp(ptr.x - ptr.sx, -75, 75), dy = clamp(ptr.y - ptr.sy, -75, 75); $('knob').style.transform = `translate(${ptr.sx + dx}px,${ptr.sy + dy}px)`; } });
 const up = e => { if (ptr && e.pointerId === ptr.id){ ptr = null; $('stick').hidden = $('knob').hidden = true; } }; canvas.addEventListener('pointerup', up); canvas.addEventListener('pointercancel', up);
 canvas.addEventListener('contextmenu', e => e.preventDefault());
-addEventListener('keydown', e => { if (!playing) return; if (e.code === 'Space' && !e.repeat) dash = .5; if (e.code === 'KeyC' && !e.repeat) toggleCam(); keys[e.code] = true;
+addEventListener('keydown', e => { if (!playing) return; if (e.code === 'Space' && !e.repeat){ dash = .5; action(); } if (e.code === 'KeyC' && !e.repeat) toggleCam(); keys[e.code] = true;
   if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code) && e.target.tagName !== 'BUTTON') e.preventDefault(); });
 addEventListener('keyup', e => { keys[e.code] = false; });
 const sb = $('sprint');
-sb.addEventListener('pointerdown', e => { e.preventDefault(); sprintBtn = true; dash = .8; sb.classList.add('on'); try { sb.setPointerCapture(e.pointerId); } catch (err) {} });
+sb.addEventListener('pointerdown', e => { e.preventDefault(); action(); sprintBtn = true; dash = .8; sb.classList.add('on'); try { sb.setPointerCapture(e.pointerId); } catch (err) {} });
 for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) sb.addEventListener(ev, () => { sprintBtn = false; sb.classList.remove('on'); });
+function action(){
+  if (!playing || role !== 'bird' || !carrying) return; let over = hyp((player.x - ISL.x) / ISL.rx, (player.z - ISL.z) / ISL.rz) > 1.1;
+  for (const e of EDGES) if ((player.x - e.ax) * e.nx + (player.z - e.az) * e.nz < .3) over = false;
+  if (!over){ banner('Aquí no', 'Suelta la pipa sobre el agua del estanque.', 1.8); return; }
+  carrying = false; delivered++; dropFood(player.x, player.z, 'seed', { x: player.x, y: player.y - .2, z: player.z }); chirp();
+}
 function toggleCam(){ camMode = camMode === 'fpv' ? 'chase' : 'fpv'; camT = 0; $('camBtn').textContent = camMode === 'fpv' ? 'Cámara: ojos del pez' : 'Cámara: de cine'; }
 $('camBtn').addEventListener('click', () => { toggleCam(); canvas.focus(); });
 
@@ -808,13 +852,14 @@ $('camBtn').addEventListener('click', () => { toggleCam(); canvas.focus(); });
 const tmpV = new V3(), tmpV2 = new V3();
 function updateTurtle(dt){
   const T = turtle, s0 = curLevel().tsp, was = T.awake; T.awake = s0 > 0;
+  if (playing && role === 'turtle'){ T.x = player.x; T.y = player.y; T.z = player.z; T.h = player.h; T.sp = player.sp; T.phase += dt * (2 + T.sp * 4); T.scared -= dt; T.chasing = false; return; }
   if (!T.awake){ T.x = -2.7; T.y = .5; T.z = -.9; T.h = -.4; T.sp = 0; T.chasing = false; return; }
   if (!was){ T.x = -1.2; T.y = -.6; T.z = -.9; T.h = 0; T.stun = 3.5; ripple(T.x, T.z, 1.6); }
   T.stun -= dt; T.scared -= dt; T.lungeCd -= dt; T.lunge -= dt; T.timer -= dt; T.chasing = false;
   let tx = T.tx, ty = T.ty, tz = T.tz, sp = s0 * .4, tg = null;
   if (T.scared > 0){ tx = T.x + (T.x - maxi.x); tz = T.z + (T.z - maxi.z); ty = -D + .8; sp = s0 * 1.3; }
   else if (T.stun <= 0){ let bd = 7.8;
-    if (playing && player.grow < BIG && inv <= 0){ const d = hyp(player.x - T.x, player.z - T.z); if (d < bd){ tg = player; bd = d; T.chasing = true; } }
+    if (playing && role === 'fish' && player.grow < BIG && inv <= 0){ const d = hyp(player.x - T.x, player.z - T.z); if (d < bd){ tg = player; bd = d; T.chasing = true; } }
     if (!tg){ bd = 4.2; for (const f of school){ if ((f === player && playing) || f.len * f.grow >= 1.18) continue; const d = hyp(f.x - T.x, f.z - T.z); if (d < bd){ bd = d; tg = f; } } }
     if (tg){ tx = tg.x; ty = tg.y; tz = tg.z; sp = s0; if (bd < 1.9 && T.lungeCd <= 0){ T.lunge = .6; T.lungeCd = 3.5; } if (T.lunge > 0) sp *= 1.6; } }
   if (!tg && T.scared <= 0 && (T.timer <= 0 || hyp(T.tx - T.x, T.tz - T.z) < .8)){ const o = { x: -8.7 + Math.random() * 17.4, z: -4.5 + Math.random() * 9 }; confine(o, .9); T.tx = o.x; T.tz = o.z; T.ty = -D + .6 + Math.random() * (D - 1.2); T.timer = 8 + Math.random() * 8; }
@@ -823,7 +868,7 @@ function updateTurtle(dt){
   T.y = clamp(T.y + clamp((ty - T.y) * 1.2, -.9, .9) * dt * Math.min(1, T.sp + .2), -D + .45, -.3); T.phase += dt * (2 + T.sp * 4);
   const hx = T.x + Math.cos(T.h) * .68, hz = T.z + Math.sin(T.h) * .68;
   if (T.stun <= 0 && T.scared <= 0){
-    if (playing && inv <= 0 && player.grow < BIG){ const L = player.len * player.grow; for (const k of [.4, .05, -.3]){ const px = player.x + Math.cos(player.h) * L * k, pz = player.z + Math.sin(player.h) * L * k; if (hyp(px - hx, pz - hz, (player.y - T.y) * 1.2) < .34){ bite(); break; } } }
+    if (playing && role === 'fish' && inv <= 0 && player.grow < BIG){ const L = player.len * player.grow; for (const k of [.4, .05, -.3]){ const px = player.x + Math.cos(player.h) * L * k, pz = player.z + Math.sin(player.h) * L * k; if (hyp(px - hx, pz - hz, (player.y - T.y) * 1.2) < .34){ bite(); break; } } }
     for (const f of school){ if ((f === player && playing) || f.len * f.grow >= 1.18) continue; if (hyp(f.x - hx, f.z - hz, f.y - T.y) < .3){ f.panic = 1.6; T.stun = 2; } }
   }
 }
@@ -837,7 +882,7 @@ function updateMaxi(dt){
   else { m.walk = false; m.ta = focus ? Math.atan2(focus.z - m.z, focus.x - m.x) : p0.inn; }
   const p = mAt(m.s); m.x = p.x; m.z = p.z; m.a += angDiff(m.ta, m.a) * Math.min(1, dt * 8); m.focus = focus;
   if (turtle.awake && turtle.scared <= 0 && m.barkCd <= 0 && hyp(turtle.x - m.x, turtle.z - m.z) < 3.1){ m.barkT = 1.3; m.barkCd = 14; turtle.scared = 5; woof(); ripple(m.x + Math.cos(p0.inn) * 1.3, m.z + Math.sin(p0.inn) * 1.3, .8);
-    if (playing){ if (goalKey() === 'maxi') lv.scare = true; banner('¡Guau, guau!', 'Maxi ha espantado a la tortuga.', 2.2); } }
+    if (playing){ if (goalKey() === 'maxi') lv.scare = true; banner('¡Guau, guau!', role === 'turtle' ? 'Maxi te ha asustado: aléjate de su borde.' : 'Maxi ha espantado a la tortuga.', 2.2); } }
 }
 function updateFlies(dt){
   const P = flyPts.geometry.attributes.position;
@@ -856,19 +901,23 @@ function update(dt){
   night += ((curLevel().night && playing ? 1 : 0) - night) * Math.min(1, dt * .5); U.uNight.value = night;
   feedT -= dt; if (feedT <= 0 && food.length < 46){ handful(); feedT = 9 + Math.random() * 5; }
   if (playing && player){
-    const L = player.len * player.grow, max = 1 + L * .7; let ws = .14, yawIn = 0, pitchIn = 0; inv -= dt; dash -= dt;
+    const L = player.len * player.grow, max = role === 'bird' ? 4.4 : role === 'turtle' ? (turtle.scared > 0 ? .7 : 1.95) : 1 + L * .7; let ws = role === 'bird' ? 1.7 : .14, yawIn = 0, pitchIn = 0; inv -= dt; dash -= dt;
     yawIn += (keys.ArrowRight || keys.KeyD ? 1 : 0) - (keys.ArrowLeft || keys.KeyA ? 1 : 0); pitchIn += (keys.ArrowUp ? 1 : 0) - (keys.ArrowDown ? 1 : 0);
     if (keys.KeyW){ ws = max; moved = true; } if (keys.KeyS) ws = 0;
     if (ptr){ const jx = clamp((ptr.x - ptr.sx) / 75, -1, 1), jy = clamp((ptr.y - ptr.sy) / 75, -1, 1); yawIn += jx * Math.abs(jx); pitchIn -= jy * Math.abs(jy); ws = max; moved = true; }
-    const want = (keys.Space || keys.ShiftLeft || keys.ShiftRight || sprintBtn || dash > 0) && stamina > .02;
+    const want = role !== 'bird' && (keys.Space || keys.ShiftLeft || keys.ShiftRight || sprintBtn || dash > 0) && stamina > .02;
     if (want){ ws = Math.max(ws, max * .8) * 1.8; stamina = Math.max(0, stamina - dt * .38); moved = true; } else stamina = Math.min(1, stamina + dt * .16);
     pFinal.u.uDash.value += ((want ? 1 : 0) - pFinal.u.uDash.value) * Math.min(1, dt * 5);
-    const turn = clamp(yawIn, -1, 1) * 2.1; player.h += turn * dt; player.bend += (clamp(turn * .1, -.3, .3) - player.bend) * Math.min(1, dt * 6);
+    const turn = clamp(yawIn, -1, 1) * (role === 'turtle' ? 1.8 : 2.1); player.h += turn * dt; player.bend += (clamp(turn * .1, -.3, .3) - player.bend) * Math.min(1, dt * 6);
     if (pitchIn) player.pitch = clamp(player.pitch + clamp(pitchIn, -1, 1) * 1.5 * dt, -1.15, 1.15); else player.pitch *= 1 - Math.min(1, dt * .5);
     player.sp += (ws - player.sp) * Math.min(1, dt * 2.6);
     const cp = Math.cos(player.pitch); player.x += Math.cos(player.h) * cp * player.sp * dt; player.z += Math.sin(player.h) * cp * player.sp * dt; player.y += Math.sin(player.pitch) * player.sp * dt;
-    confine(player, L * .14 + .12);
-    if (player.y > -.2){ player.y = -.2; if (player.pitch > 0) player.pitch *= 1 - Math.min(1, dt * 4); } if (player.y < -D + .4){ player.y = -D + .4; if (player.pitch < 0) player.pitch *= 1 - Math.min(1, dt * 4); }
+    if (role === 'bird'){ player.x = clamp(player.x, -14, 14); player.z = clamp(player.z, -7.5, 13); player.y = clamp(player.y, .8, 13);
+      if (!carrying && hyp(player.x - FEED.x, player.y - FEED.y, player.z - FEED.z) < 1.3){ carrying = true; chirp(); banner('Pipa cogida', 'Llévala al estanque y suéltala sobre el agua.', 2); } }
+    else { confine(player, role === 'turtle' ? .7 : L * .14 + .12);
+      if (player.y > -.2){ player.y = -.2; if (player.pitch > 0) player.pitch *= 1 - Math.min(1, dt * 4); } if (player.y < -D + .4){ player.y = -D + .4; if (player.pitch < 0) player.pitch *= 1 - Math.min(1, dt * 4); } }
+    if (role === 'turtle'){ headOf(player, tmpV); for (const f of school){ if (f.gone > 0 || f.len * f.grow >= 1.18) continue;
+        if (hyp(f.x - tmpV.x, f.y - tmpV.y, f.z - tmpV.z) < .5){ f.gone = 10; catches++; ripple(f.x, f.z, 1); thud(); banner('¡Atrapado!', `${f.type.name}. Llevas ${catches}.`, 1.6); } } }
     player.phase += dt * (2.4 + player.sp / L * 7.5); player.yawIn = (player.yawIn || 0) + (clamp(yawIn, -1, 1) - (player.yawIn || 0)) * Math.min(1, dt * 5);
     if (moved) $('hint').classList.add('off');
     const gk = goalKey();
@@ -877,9 +926,10 @@ function update(dt){
     else if (gk === 'lap'){ const a = Math.atan2(player.z - ISL.z, player.x - ISL.x); if (lv.lapA !== null) lv.lap += angDiff(a, lv.lapA); lv.lapA = a; }
     checkGoals();
   }
-  updateTurtle(dt); updateMaxi(dt); updateFlies(dt);
+  updateTurtle(dt); updateMaxi(dt); updateIsa(dt); updateFlies(dt);
   // the rest of the school
   for (const f of school){ if (f === player && playing) continue;
+    if (f.gone > 0){ f.gone -= dt; if (f.gone <= 0){ let best = null, bd = 0; for (const q of [[-8, -4], [8, -3.9], [7, 1.4], [-7.5, 3.9], [1, 3.9]]){ const d = hyp(q[0] - turtle.x, q[1] - turtle.z); if (d > bd){ bd = d; best = q; } } f.x = best[0]; f.z = best[1]; f.y = -1.5; f.gone = 0; } continue; }
     const L = f.len * f.grow; f.timer -= dt; f.panic -= dt; let best = null, bd = 4.6;
     for (const p of food){ if (p.state < 1) continue; const d = hyp(p.x - f.x, p.z - f.z, p.y - f.y); if (d < bd){ bd = d; best = p; } }
     let tx = f.tx, tz = f.tz, ty = f.ty, sp = L * (.28 + f.mood * .08);
@@ -895,25 +945,28 @@ function update(dt){
   // food: falls, floats, then sinks slowly
   for (let i = food.length - 1; i >= 0; i--){ const p = food[i]; let gone = false;
     if (p.delay > 0){ p.delay -= dt; p.mesh.visible = false; continue; } p.mesh.visible = true; p.t += dt;
-    if (p.state === 0){ if (p.fy){ const k = Math.min(1, p.t / .7); p.mesh.position.set(p.fx + (p.x - p.fx) * k, p.fy * (1 - k * k) + Math.sin(k * Math.PI) * .5, p.fz + (p.z - p.fz) * k); if (k >= 1){ p.state = 1; p.y = -.03; p.t = 0; ripple(p.x, p.z, 1.1); plop(.8); } continue; }
+    if (p.state === 0){ if (p.fy){ const k = Math.min(1, p.t / .7); p.mesh.position.set(p.fx + (p.x - p.fx) * k, p.fy * (1 - k * k) + Math.sin(k * Math.PI) * .5, p.fz + (p.z - p.fz) * k); if (k >= 1){ p.state = 1; p.y = -.03; p.t = 0; const sd = p.kind === 'seed'; ripple(p.x, p.z, sd ? 1.1 : .45); if (sd || (playing && hyp(p.x - player.x, p.z - player.z) < 6)) plop(sd ? .8 : .25); } continue; }
       p.y -= dt * 5; if (p.y <= -.03){ p.y = -.03; p.state = 1; p.t = 0; ripple(p.x, p.z, .45); if (playing && hyp(p.x - player.x, p.z - player.z) < 6) plop(.25); } }
     else if (p.state === 1){ p.y = -.035 + Math.sin(p.t * 3 + p.spin) * .008; if (p.t > p.float) p.state = 2; }
     else { p.y = Math.max(-D + .09, p.y - dt * (p.kind === 'seed' ? .2 : .13)); if (p.t > 75) gone = true; }
     p.mesh.position.set(p.x, p.y, p.z); p.mesh.rotation.set(p.t * .4 + p.spin, p.spin, p.t * .3);
-    if (!gone && p.state > 0) for (const f of school){ const L = f.len * f.grow; headOf(f, tmpV); if (hyp(p.x - tmpV.x, p.y - tmpV.y, p.z - tmpV.z) < L * .13 + .17){ gone = true; if (p.y > -.3) ripple(p.x, p.z, .6);
+    if (!gone && p.state > 0) for (const f of school){ if (f.gone > 0) continue; const L = f.len * f.grow; headOf(f, tmpV); if (hyp(p.x - tmpV.x, p.y - tmpV.y, p.z - tmpV.z) < L * .13 + .17){ gone = true; if (p.y > -.3) ripple(p.x, p.z, .6);
       if (f === player && playing){ if (p.kind === 'seed'){ seeds++; lv.seeds++; } else { eaten++; lv.eaten++; } f.grow = Math.min(1.5, f.grow + (p.kind === 'seed' ? .05 : .015)); plop(.7); } break; } }
     if (gone){ scene.remove(p.mesh); food.splice(i, 1); }
   }
   // pirrura
+  if (playing && role === 'bird'){ bird.x = player.x; bird.y = player.y; bird.z = player.z; bird.a = player.h; bird.to = null; bird.flap += dt * (12 + player.sp * 3); }
+  else {
   bird.cool -= dt;
   if (bird.to){ bird.t += dt / bird.dur; const t = Math.min(1, bird.t), e = t * t * (3 - 2 * t);
     bird.x = bird.from.x + (bird.to.x - bird.from.x) * e; bird.z = bird.from.z + (bird.to.z - bird.from.z) * e; bird.y = bird.from.y + (bird.to.y - bird.from.y) * e + Math.sin(t * Math.PI) * 2.6; bird.flap += dt * 26;
     bird.a = Math.atan2(bird.to.z - bird.from.z, bird.to.x - bird.from.x);
     if (t >= 1){ bird.to = null; bird.wait = 13 + Math.random() * 10; bird.a = Math.atan2(0 - bird.z, 0 - bird.x); if (bird.perch === 0) bird.a = 1.2; } }
-  else { bird.wait -= dt; const P = PERCH[bird.perch];
+  else { bird.wait -= dt; const P = PERCH[bird.perch]; if (P === isaPerch){ bird.x = P.x; bird.y = P.y; bird.z = P.z; bird.a = isa.a; }
     if (playing && bird.cool <= 0 && hyp(player.x - P.x, player.z - P.z) < P.r){ const d = hyp(player.x - bird.x, player.z - bird.z) || 1, k = Math.max(0, d - .5) / d;
       dropFood(bird.x + (player.x - bird.x) * k, bird.z + (player.z - bird.z) * k, 'seed', bird); bird.cool = 9; chirp(); bird.a = Math.atan2(player.z - bird.z, player.x - bird.x); bird.wait = Math.max(bird.wait, 5); }
     if (bird.wait <= 0){ let n; do n = Math.random() * PERCH.length | 0; while (n === bird.perch); bird.from = { x: bird.x, y: bird.y, z: bird.z }; bird.to = PERCH[n]; bird.perch = n; bird.t = 0; bird.dur = 1.3 + hyp(bird.to.x - bird.x, bird.to.z - bird.z) / 6; } }
+  }
   if (Math.random() < dt * 2.5) ripple(AER.x + (Math.random() - .5) * .8, AER.z + (Math.random() - .5) * .8, .5);
   if (Math.random() < dt * 2.5) ripple(FALL.x - .1, FALL.z + (Math.random() - .5) * .2, .8);
   if (Math.random() < dt * 2) ripple(8.3 + (Math.random() - .5) * .5, -3.75, .5);
@@ -924,9 +977,10 @@ function update(dt){
 let dbgCam = null;
 const camPos = new V3(), camLook = new V3(), mLook = new THREE.Matrix4(), qT = new THREE.Quaternion(), qR = new THREE.Quaternion(), UP = new V3(0, 1, 0), AX = new V3(0, 0, 1);
 function syncScene(dt){
-  school.forEach((f, i) => { syncFish(f); U.uFishS.value[i].set(f.x, f.y, f.z); f.mesh.visible = true; f.mesh.material.uniforms.uGlow.value = 0; });
+  school.forEach((f, i) => { syncFish(f); U.uFishS.value[i].set(f.x, f.y, f.z); f.mesh.visible = !(f.gone > 0); f.mesh.material.uniforms.uGlow.value = 0; });
+  turtle.g.visible = bird.g.visible = true; bird.seed.visible = carrying && role === 'bird';
   U.uFishS.value[11].set(turtle.x, turtle.awake ? turtle.y : -99, turtle.z);
-  if (playing && player){ player.mesh.visible = camMode !== 'fpv' || camT < .5; if (inv > 0) player.mesh.material.uniforms.uGlow.value = .5 + Math.sin(time * 22) * .5; }
+  if (playing && player){ player.mesh.visible = camMode !== 'fpv' || camT < .5; if (role === 'fish' && inv > 0) player.mesh.material.uniforms.uGlow.value = .5 + Math.sin(time * 22) * .5; }
   // turtle
   turtle.g.position.set(turtle.x, turtle.y, turtle.z); turtle.g.rotation.set(0, -turtle.h, turtle.awake ? Math.sin(turtle.phase * .5) * .05 : 0);
   for (const l of turtle.legs){ const u = l.userData; l.rotation.y = turtle.awake ? (u.front ? -.5 : .7) * u.s + Math.sin(turtle.phase + (u.front ? 0 : 2) + (u.s > 0 ? 0 : Math.PI)) * .6 : (u.front ? -.3 : .5) * u.s; }
@@ -935,9 +989,11 @@ function syncScene(dt){
   m.legs.forEach((l, i) => l.rotation.z = m.walk ? Math.sin(m.phase + (i % 3 ? Math.PI : 0)) * .6 : 0);
   m.head.rotation.z += ((m.barkT > 0 ? .25 + Math.sin(m.barkT * 20) * .2 : m.focus && !m.walk ? -.55 : 0) - m.head.rotation.z) * Math.min(1, dt * 8);
   m.tail.rotation.y = Math.sin(time * (m.walk ? 7 : 11)) * .5;
+  isa.g.position.set(isa.x, isa.y, isa.z); isa.g.rotation.y = -isa.a; isa.legs.forEach((l, i) => l.rotation.z = isa.walk ? Math.sin(isa.phase + i * Math.PI) * .5 : 0);
+  isa.arm.rotation.z = isa.throwT > 0 ? 2.5 * Math.sin((1.3 - isa.throwT) / 1.3 * Math.PI) : isa.walk ? Math.sin(isa.phase) * .35 : .08;
   // pirrura
-  bird.g.position.set(bird.x, bird.y, bird.z); bird.g.rotation.y = -bird.a;
-  for (const w of bird.wings) w.rotation.x = bird.to ? Math.sin(bird.flap) * 1.1 * w.userData.s : w.userData.s * -1.35;
+  const flying = bird.to || (playing && role === 'bird'); bird.g.position.set(bird.x, bird.y, bird.z); bird.g.rotation.set(0, -bird.a, playing && role === 'bird' ? player.pitch : 0, 'YZX');
+  for (const w of bird.wings) w.rotation.x = flying ? Math.sin(bird.flap) * 1.1 * w.userData.s : w.userData.s * -1.35;
   // camera
   camT += dt; let fov = 55, rate = 2;
   if (!playing){ const a = time * .07 + .9; camPos.set(Math.cos(a) * 15.5 - 1, 5.2 + Math.sin(time * .11) * 1.2, Math.sin(a) * 12.5); camLook.set(-1.5, .2, 0); rate = 1.2; qR.identity(); }
@@ -984,13 +1040,21 @@ TYPES.forEach(T => { const b = document.createElement('button'); b.type = 'butto
   const sw = document.createElement('i'); sw.style.background = `${T.A} url(${SKINDATA[T.id]}) center / 100% 100%`;
   const n = document.createElement('span'); n.textContent = T.name; const s = document.createElement('small'); s.textContent = T.note; b.append(sw, n, s); picks.appendChild(b);
   b.addEventListener('click', () => { sel = T.id; picks.querySelectorAll('.pick').forEach(p => p.setAttribute('aria-pressed', p === b)); }); });
-function start(){ const nf = school.find(f => f.type.id === sel), g = player ? player.grow : (saved.grow || START);
-  if (player && player !== nf){ player.grow = 1; nf.x = player.x; nf.y = player.y; nf.z = player.z; nf.h = player.h; }
-  player = nf; player.grow = clamp(g, START, 1.5); player.pitch = 0; playing = true; ptr = null; inv = 2; camT = 0;
+function start(){
+  playing = true; ptr = null; inv = 2; camT = 0; carrying = false;
+  if (role === 'fish'){ const nf = school.find(f => f.type.id === sel), g = fishP ? fishP.grow : (saved.grow || START);
+    if (fishP && fishP !== nf){ fishP.grow = 1; nf.x = fishP.x; nf.y = fishP.y; nf.z = fishP.z; nf.h = fishP.h; }
+    fishP = player = nf; nf.gone = 0; player.grow = clamp(g, START, 1.5); player.pitch = 0; }
+  else if (role === 'turtle'){ const w = turtle.awake; player = { x: w ? turtle.x : -1.2, y: w ? turtle.y : -1, z: w ? turtle.z : -.9, h: w ? turtle.h : 0, pitch: 0, sp: 0, phase: 0, len: 1.45, grow: 1, bend: 0, mesh: turtle.g }; turtle.scared = 0; }
+  else { player = { x: bird.x, y: Math.max(bird.y, 2.6), z: bird.z, h: bird.a, pitch: 0, sp: 0, phase: 0, len: .8, grow: 1, bend: 0, mesh: bird.g }; if (camMode === 'fpv') toggleCam(); }
+  $('counts').hidden = role !== 'fish'; $('stam').hidden = role === 'bird'; $('sprint').textContent = role === 'bird' ? 'Soltar' : 'Impulso'; lastQ = '';
   $('intro').hidden = true; $('hud').hidden = false; $('hint').hidden = false; hudSync(); levelBanner(); canvas.focus(); }
+document.querySelectorAll('#roles .role').forEach(b => b.addEventListener('click', () => { role = b.dataset.role; document.querySelectorAll('#roles .role').forEach(o => o.setAttribute('aria-pressed', o === b));
+  $('picks').hidden = role !== 'fish'; $('reset').hidden = role !== 'fish' || level === 0;
+  $('go').textContent = role === 'fish' ? (level > 0 && level < LEVELS.length ? `Continuar en el nivel ${level + 1}` : 'Sumergirse') : role === 'turtle' ? 'Salir de caza' : 'Echar a volar'; }));
 $('go').addEventListener('click', start);
 $('reset').addEventListener('click', () => { level = 0; eaten = 0; seeds = 0; lives = 3; newLv(); saved.grow = START; if (player) player.grow = START; save(); $('reset').hidden = true; $('go').textContent = 'Sumergirse'; });
-$('swap').addEventListener('click', () => { playing = false; save(); for (const k in keys) keys[k] = false; $('intro').hidden = false; $('hud').hidden = true; $('hint').hidden = true; $('mGoal').hidden = $('mTurtle').hidden = true; $('reset').hidden = level === 0; $('go').textContent = 'Volver al agua'; });
+$('swap').addEventListener('click', () => { playing = false; save(); for (const k in keys) keys[k] = false; $('intro').hidden = false; $('hud').hidden = true; $('hint').hidden = true; $('mGoal').hidden = $('mTurtle').hidden = true; $('reset').hidden = level === 0 || role !== 'fish'; $('go').textContent = role === 'fish' ? 'Volver al agua' : role === 'turtle' ? 'Salir de caza' : 'Echar a volar'; });
 if (saved.level > 0){ level = Math.min(saved.level | 0, LEVELS.length); eaten = saved.eaten | 0; seeds = saved.seeds | 0; $('reset').hidden = false; $('go').textContent = level < LEVELS.length ? `Continuar en el nivel ${level + 1}` : 'Volver al agua'; }
 
 /* ---------- loop ---------- */
@@ -1005,7 +1069,7 @@ function frame(t){
   requestAnimationFrame(frame);
 }
 function boot(d){ if (d && d.sel){ sel = d.sel; eaten = d.eaten | 0; seeds = d.seeds | 0; level = d.level | 0; saved.grow = d.grow; start(); } for (let i = 0; i < 60; i++) update(.05); requestAnimationFrame(frame); }
-window.__koi = { state: () => ({ playing, level, goal: lv.g, lives, eaten, seeds, sp: player && player.sp, grow: player && player.grow, cam: camMode, under: U.uUnder.value, quality, hdr, food: food.length,
+window.__koi = { role: r => { role = r; }, extra: () => ({ role, catches, delivered, carrying, small: school.filter(f => !(f.gone > 0) && f.len * f.grow < 1.18).map(f => [f.x, f.y, f.z])[0], isa: [isa.x, isa.z], bird: [bird.x, bird.y, bird.z, bird.perch] }), state: () => ({ playing, level, goal: lv.g, lives, eaten, seeds, sp: player && player.sp, grow: player && player.grow, cam: camMode, under: U.uUnder.value, quality, hdr, food: food.length,
     p: player && [player.x, player.y, player.z, player.h].map(v => +v.toFixed(2)), turtle: { x: turtle.x, y: turtle.y, z: turtle.z, awake: turtle.awake, chasing: turtle.chasing }, flies: flies.length }),
   view: a => { dbgCam = a; }, splat: () => splats.reduce((a, s) => a + s.n, 0),
   setLevel: n => { level = n; newLv(); lives = 3; levelBanner(); }, put: (x, y, z, h, p) => { player.x = x; player.y = y; player.z = z; player.h = h; player.pitch = p || 0; camT = 9; } };
