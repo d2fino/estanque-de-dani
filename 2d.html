@@ -123,7 +123,7 @@ body{background:var(--water);color:var(--paper);font-family:var(--body);overflow
 <div id="intro">
   <div class="box">
     <h2>El Estanque de Dani</h2>
-    <p>Elige un pez y empieza de alevín. Come pienso y las pipas que lanza la pirrura para crecer: la tortuga persigue a los peces pequeños, y cuanto más grande eres, más rápido nadas. Maxi vigila desde la terraza y la espanta a ladridos. Los cometas son los más pequeños y los más difíciles.</p>
+    <p>Elige un pez y empieza de alevín. Come pienso y las pipas que lanza Dorito, la pirrura, para crecer: Mbappe, la tortuga, persigue a los peces pequeños, y cuanto más grande eres, más rápido nadas. Maxi vigila desde la terraza y la espanta a ladridos. Los cometas son los más pequeños y los más difíciles.</p>
     <div id="picks"></div>
     <div class="row"><button id="go" type="button">Entrar al estanque</button><button class="btn" id="reset" type="button" hidden>Empezar desde el nivel 1</button><a class="btn" href="./" style="text-decoration:none">Cambiar de juego</a></div>
   </div>
@@ -512,19 +512,19 @@ const flies = [];
 const pct = v => clamp(v * 100 | 0, 0, 99);
 const G = {
   eat: n => ({ k: 'eat', text: () => `Come ${n} bolitas de pienso. Llevas ${Math.min(lv.eaten, n)}.`, done: () => lv.eaten >= n, at: () => null }),
-  seed: n => ({ k: 'seed', text: () => n > 1 ? `Consigue ${n} pipas de la pirrura. Llevas ${Math.min(lv.seeds, n)}.` : 'Acércate al posadero de la pirrura: te lanzará una pipa. Cómetela.', done: () => lv.seeds >= n, at: () => bird }),
+  seed: n => ({ k: 'seed', text: () => n > 1 ? `Consigue ${n} pipas de Dorito. Llevas ${Math.min(lv.seeds, n)}.` : 'Acércate al posadero de Dorito: te lanzará una pipa. Cómetela.', done: () => lv.seeds >= n, at: () => bird }),
   bub: () => ({ k: 'bub', text: () => 'Cruza la columna de burbujas del aireador.', done: () => lv.bub, at: () => AER }),
   fall: () => ({ k: 'fall', text: () => 'Nada bajo el chorro que cae del filtro.', done: () => lv.fall, at: () => FALL }),
   lap: () => ({ k: 'lap', text: () => `Da una vuelta completa a la isla del Buda. ${pct(Math.abs(lv.lap) / TAU)} %`, done: () => Math.abs(lv.lap) > TAU * .98, at: () => ISL }),
-  maxi: () => ({ k: 'maxi', text: () => 'Lleva a la tortuga hasta el borde donde está Maxi para que la espante a ladridos.', done: () => lv.scare, at: () => maxi }),
-  grow: () => ({ k: 'grow', text: () => `Come hasta crecer tanto que la tortuga ya no se atreva contigo. ${pct((player.grow - START) / (BIG - START))} %`, done: () => player.grow >= BIG, at: () => null }),
+  maxi: () => ({ k: 'maxi', text: () => 'Lleva a Mbappe hasta el borde donde está Maxi para que la espante a ladridos.', done: () => lv.scare, at: () => maxi }),
+  grow: () => ({ k: 'grow', text: () => `Come hasta crecer tanto que Mbappe ya no se atreva contigo. ${pct((player.grow - START) / (BIG - START))} %`, done: () => player.grow >= BIG, at: () => null }),
   fly: n => ({ k: 'fly', text: () => `Atrapa ${n} luciérnagas de las que rozan el agua. Llevas ${Math.min(lv.flies, n)}.`, done: () => lv.flies >= n, at: () => flies[0] || null }),
 };
 const LEVELS = [
-  { name: 'Primeras bolitas', intro: 'La tortuga duerme en la isla. Come tranquilo.', tsp: 0, goals: [G.eat(6), G.seed(1)] },
-  { name: 'La tortuga despierta', intro: 'Persigue a los peces pequeños. Cambia de rumbo: ella gira despacio.', tsp: 118, goals: [G.bub(), G.fall(), G.eat(8)] },
-  { name: 'Maxi al rescate', intro: 'Maxi sigue a la tortuga desde la terraza y le ladra si se acerca al borde.', tsp: 132, goals: [G.lap(), G.maxi()] },
-  { name: 'Pipas para todos', intro: 'La tortuga ya nada más deprisa.', tsp: 146, goals: [G.seed(3), G.eat(12)] },
+  { name: 'Primeras bolitas', intro: 'Mbappe duerme en la isla. Come tranquilo.', tsp: 0, goals: [G.eat(6), G.seed(1)] },
+  { name: 'Mbappe despierta', intro: 'Persigue a los peces pequeños. Cambia de rumbo: ella gira despacio.', tsp: 118, goals: [G.bub(), G.fall(), G.eat(8)] },
+  { name: 'Maxi al rescate', intro: 'Maxi sigue a Mbappe desde la terraza y le ladra si se acerca al borde.', tsp: 132, goals: [G.lap(), G.maxi()] },
+  { name: 'Pipas para todos', intro: 'Mbappe ya nada más deprisa.', tsp: 146, goals: [G.seed(3), G.eat(12)] },
   { name: 'Koi grande', intro: 'Cuanto más creces, más corres. Hazte demasiado grande para ella.', tsp: 158, goals: [G.grow()] },
   { name: 'Noche de luciérnagas', intro: 'Ha caído la noche sobre el estanque.', tsp: 168, night: 1, goals: [G.fly(8)] },
 ];
@@ -556,7 +556,7 @@ function bite(){
   lives = 3; newLv(); turtle.stun = 5; let best = null, bd = 0;
   for (const p of [[400,400],[2000,420],[1900,950],[450,1200],[1300,1200]]){ const d = hyp(p[0] - turtle.x, p[1] - turtle.y); if (d > bd){ bd = d; best = p; } }
   player.x = best[0]; player.y = best[1]; resetSpine(player);
-  banner('La tortuga te ha pillado', 'Empiezas el nivel otra vez, con tres vidas.', 4);
+  banner('Mbappe te ha pillado', 'Empiezas el nivel otra vez, con tres vidas.', 4);
 }
 
 /* ---------- sound ---------- */

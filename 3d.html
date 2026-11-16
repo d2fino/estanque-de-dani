@@ -138,11 +138,11 @@ body{background:var(--water);color:var(--paper);font-family:var(--body);overflow
 <div id="intro">
   <div class="box">
     <h2><small>Bajo el agua · 3D</small>El Estanque de Dani</h2>
-    <p>Sumérgete en el estanque y elige con quién: un koi que come y crece esquivando a la tortuga, la tortuga que persigue a los peces pequeños, o la pirrura, que reparte pipas y recorre el jardín volando. Isabella echa el pienso desde el borde y Maxi vigila.</p>
+    <p>Sumérgete en el estanque y elige con quién: un koi que come y crece esquivando a Mbappe; Mbappe, que es la tortuga y persigue a los peces pequeños; o Dorito, que es la pirrura, reparte pipas y recorre el jardín volando. Isabella echa el pienso desde el borde y Maxi vigila.</p>
     <div class="row" id="roles" role="group" aria-label="Personaje">
-      <button class="pick role" type="button" id="role-fish" data-role="fish" aria-pressed="true"><span>Pez koi</span><small>come, crece y esquiva a la tortuga</small></button>
-      <button class="pick role" type="button" id="role-turtle" data-role="turtle" aria-pressed="false"><span>Tortuga</span><small>persigue a los peces pequeños</small></button>
-      <button class="pick role" type="button" id="role-bird" data-role="bird" aria-pressed="false"><span>Pirrura</span><small>reparte pipas y explora el jardín</small></button>
+      <button class="pick role" type="button" id="role-fish" data-role="fish" aria-pressed="true"><span>Pez koi</span><small>come, crece y esquiva a Mbappe</small></button>
+      <button class="pick role" type="button" id="role-turtle" data-role="turtle" aria-pressed="false"><span>Mbappe</span><small>la tortuga: persigue a los peces pequeños</small></button>
+      <button class="pick role" type="button" id="role-bird" data-role="bird" aria-pressed="false"><span>Dorito</span><small>la pirrura: reparte pipas y explora el jardín</small></button>
     </div>
     <div id="picks"></div>
     <div class="row"><button id="go" type="button">Sumergirse</button><button class="btn" id="reset" type="button" hidden>Empezar desde el nivel 1</button><a class="btn" href="./" style="text-decoration:none">Cambiar de juego</a></div>
@@ -757,25 +757,25 @@ const flies = [];
 const pct = v => clamp(v * 100 | 0, 0, 99);
 const G = {
   eat: n => ({ k: 'eat', text: () => `Come ${n} bolitas de pienso: caen desde la superficie. Llevas ${Math.min(lv.eaten, n)}.`, done: () => lv.eaten >= n, at: () => { let b = null, bd = 1e9; for (const f of food){ if (f.kind !== 'pellet' || f.state < 1) continue; const d = hyp(f.x - player.x, f.z - player.z, f.y - player.y); if (d < bd){ bd = d; b = f; } } return b; } }),
-  seed: n => ({ k: 'seed', text: () => n > 1 ? `Consigue ${n} pipas de la pirrura. Llevas ${Math.min(lv.seeds, n)}.` : 'Nada hasta debajo de la pirrura: te lanzará una pipa. Cómetela.', done: () => lv.seeds >= n, at: () => food.find(f => f.kind === 'seed') || bird }),
+  seed: n => ({ k: 'seed', text: () => n > 1 ? `Consigue ${n} pipas de Dorito. Llevas ${Math.min(lv.seeds, n)}.` : 'Nada hasta debajo de Dorito: te lanzará una pipa. Cómetela.', done: () => lv.seeds >= n, at: () => food.find(f => f.kind === 'seed') || bird }),
   bub: () => ({ k: 'bub', text: () => 'Cruza la columna de burbujas del aireador.', done: () => lv.bub, at: () => AER }),
   fall: () => ({ k: 'fall', text: () => 'Nada bajo el chorro que cae del filtro.', done: () => lv.fall, at: () => FALL }),
   lap: () => ({ k: 'lap', text: () => `Da una vuelta completa a la isla del Buda. ${pct(Math.abs(lv.lap) / TAU)} %`, done: () => Math.abs(lv.lap) > TAU * .98, at: () => null }),
-  maxi: () => ({ k: 'maxi', text: () => 'Lleva a la tortuga hasta el borde donde está Maxi para que la espante a ladridos.', done: () => lv.scare, at: () => maxi }),
-  grow: () => ({ k: 'grow', text: () => `Come hasta crecer tanto que la tortuga ya no se atreva contigo. ${pct((player.grow - START) / (BIG - START))} %`, done: () => player.grow >= BIG, at: () => null }),
+  maxi: () => ({ k: 'maxi', text: () => 'Lleva a Mbappe hasta el borde donde está Maxi para que la espante a ladridos.', done: () => lv.scare, at: () => maxi }),
+  grow: () => ({ k: 'grow', text: () => `Come hasta crecer tanto que Mbappe ya no se atreva contigo. ${pct((player.grow - START) / (BIG - START))} %`, done: () => player.grow >= BIG, at: () => null }),
   fly: n => ({ k: 'fly', text: () => `Atrapa ${n} luciérnagas de las que brillan junto a la superficie. Llevas ${Math.min(lv.flies, n)}.`, done: () => lv.flies >= n, at: () => flies[0] || null }),
 };
 const LEVELS = [
-  { name: 'Primeras bolitas', intro: 'Isabella echa el pienso desde el borde. La tortuga duerme en la isla.', tsp: 0, goals: [G.eat(6), G.seed(1)] },
-  { name: 'La tortuga despierta', intro: 'Caza a los peces pequeños. Cambia de rumbo: ella gira despacio.', tsp: 1.18, goals: [G.bub(), G.fall(), G.eat(8)] },
-  { name: 'Maxi al rescate', intro: 'Maxi sigue a la tortuga desde la terraza y le ladra si se acerca al borde.', tsp: 1.32, goals: [G.lap(), G.maxi()] },
-  { name: 'Pipas para todos', intro: 'La tortuga ya nada más deprisa.', tsp: 1.46, goals: [G.seed(3), G.eat(12)] },
+  { name: 'Primeras bolitas', intro: 'Isabella echa el pienso desde el borde. Mbappe duerme en la isla.', tsp: 0, goals: [G.eat(6), G.seed(1)] },
+  { name: 'Mbappe despierta', intro: 'Caza a los peces pequeños. Cambia de rumbo: ella gira despacio.', tsp: 1.18, goals: [G.bub(), G.fall(), G.eat(8)] },
+  { name: 'Maxi al rescate', intro: 'Maxi sigue a Mbappe desde la terraza y le ladra si se acerca al borde.', tsp: 1.32, goals: [G.lap(), G.maxi()] },
+  { name: 'Pipas para todos', intro: 'Mbappe ya nada más deprisa.', tsp: 1.46, goals: [G.seed(3), G.eat(12)] },
   { name: 'Koi grande', intro: 'Cuanto más creces, más corres. Hazte demasiado grande para ella.', tsp: 1.58, goals: [G.grow()] },
   { name: 'Noche de luciérnagas', intro: 'Ha caído la noche sobre el estanque.', tsp: 1.68, night: 1, goals: [G.fly(8)] },
 ];
 const FREE = { name: 'Estanque en calma', intro: 'Has superado los seis niveles.', tsp: 1.4, goals: [] };
 const ROLE_LV = {
-  turtle: { name: 'Tortuga al acecho', intro: 'Atrapa a los peces pequeños. Maxi te ladra si te acercas a su borde.', tsp: 1, goals: [{ k: 'hunt', done: () => false,
+  turtle: { name: 'Mbappe al acecho', intro: 'Atrapa a los peces pequeños. Maxi te ladra si te acercas a su borde.', tsp: 1, goals: [{ k: 'hunt', done: () => false,
     text: () => `Atrapa a los peces pequeños: Calicó, Tancho y los Cometas. Los koi grandes se te escapan. Llevas ${catches}.`,
     at: () => { let b = null, bd = 1e9; for (const f of school){ if (f.gone > 0 || f.len * f.grow >= 1.18) continue; const d = hyp(f.x - player.x, f.z - player.z); if (d < bd){ bd = d; b = f; } } return b; } }] },
   bird: { name: 'Reparto de pipas', intro: 'Coge pipas del comedero de la terraza y suéltalas sobre el agua.', tsp: 1.3, goals: [{ k: 'deliver', done: () => false,
@@ -808,7 +808,7 @@ function bite(){
   lives = 3; newLv(); turtle.stun = 5; let best = null, bd = 0;
   for (const p of [[-8, -4], [8, -3.9], [7, 1.4], [-7.5, 3.9], [1, 3.9]]){ const d = hyp(p[0] - turtle.x, p[1] - turtle.z); if (d > bd){ bd = d; best = p; } }
   player.x = best[0]; player.z = best[1]; player.y = -1.5; camT = 0;
-  banner('La tortuga te ha pillado', 'Empiezas el nivel otra vez, con tres vidas.', 4);
+  banner('Mbappe te ha pillado', 'Empiezas el nivel otra vez, con tres vidas.', 4);
 }
 
 /* ---------- sound ---------- */
@@ -882,7 +882,7 @@ function updateMaxi(dt){
   else { m.walk = false; m.ta = focus ? Math.atan2(focus.z - m.z, focus.x - m.x) : p0.inn; }
   const p = mAt(m.s); m.x = p.x; m.z = p.z; m.a += angDiff(m.ta, m.a) * Math.min(1, dt * 8); m.focus = focus;
   if (turtle.awake && turtle.scared <= 0 && m.barkCd <= 0 && hyp(turtle.x - m.x, turtle.z - m.z) < 3.1){ m.barkT = 1.3; m.barkCd = 14; turtle.scared = 5; woof(); ripple(m.x + Math.cos(p0.inn) * 1.3, m.z + Math.sin(p0.inn) * 1.3, .8);
-    if (playing){ if (goalKey() === 'maxi') lv.scare = true; banner('¡Guau, guau!', role === 'turtle' ? 'Maxi te ha asustado: aléjate de su borde.' : 'Maxi ha espantado a la tortuga.', 2.2); } }
+    if (playing){ if (goalKey() === 'maxi') lv.scare = true; banner('¡Guau, guau!', role === 'turtle' ? 'Maxi te ha asustado: aléjate de su borde.' : 'Maxi ha espantado a Mbappe.', 2.2); } }
 }
 function updateFlies(dt){
   const P = flyPts.geometry.attributes.position;
