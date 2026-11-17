@@ -134,6 +134,7 @@ body{background:var(--water);color:var(--paper);font-family:var(--body);overflow
   <div class="card" id="quest">
     <h1>El Estanque de Dani</h1>
     <span class="step" id="questStep">Nivel 1 de 6</span>
+    <span class="step" id="skyLine"></span>
     <p id="questText"></p>
   </div>
   <div id="side">
@@ -164,7 +165,7 @@ body{background:var(--water);color:var(--paper);font-family:var(--body);overflow
     </div>
     <div id="picks"></div>
     <p style="font-size:11px;opacity:.6">Formas de Dorito y Mbappe: modelos «Parrot» y «Turtle» de Poly by Google, licencia CC-BY 3.0, repintados.</p>
-    <div class="row"><button id="go" type="button">Sumergirse</button><button class="btn" id="reset" type="button" hidden>Empezar desde el nivel 1</button><button class="btn" id="albumBtn" type="button">Álbum</button><a class="btn" href="./" style="text-decoration:none">Cambiar de juego</a></div>
+    <div class="row"><button id="go" type="button">Sumergirse</button><button class="btn" id="reset" type="button" hidden>Empezar desde el nivel 1</button><button class="btn" id="albumBtn" type="button">Álbum</button><button class="btn" id="wxBtn" type="button">Cielo: el día avanza</button><a class="btn" href="./" style="text-decoration:none">Cambiar de juego</a></div>
   </div>
 </div>
 <div id="album" hidden><div class="box"><h2>Álbum del estanque</h2><p class="lead">Las fichas de todos. A los peces puedes ponerles nombre aquí: se guarda en este móvil y se usa en el juego. Juega con cada uno para completar su ficha.</p><div id="cards"></div><div class="row"><button class="btn" id="albumClose" type="button">Volver</button></div></div></div>
@@ -219,14 +220,14 @@ const TEXMODE = { '1': ['floor', null, [.42, .27, 2.5, 0]], '2': ['stone', null,
 /* ---------- shared GLSL ---------- */
 const SUN = new V3(.45, .78, .35).normalize();
 const U = {
-  uTime: { value: 0 }, uNight: { value: 0 }, uUnder: { value: 0 }, uFog: { value: .1 }, uSun: { value: SUN },
+  uTime: { value: 0 }, uNight: { value: 0 }, uUnder: { value: 0 }, uFog: { value: .1 }, uSun: { value: SUN }, uDusk: { value: 0 }, uRain: { value: 0 },
   uFishS: { value: Array.from({ length: 12 }, () => new V3(0, -99, 0)) },
   uRip: { value: Array.from({ length: 8 }, () => new THREE.Vector4(0, 0, -99, 0)) },
   uShadow: { value: null }, uShadowM: { value: new THREE.Matrix4() },
 };
 const sdPondGLSL = 'float sdPond(vec2 p){ float d=-99.; ' + EDGES.map(e => `d=max(d,-dot(p-vec2(${e.ax.toFixed(2)},${e.az.toFixed(2)}),vec2(${e.nx.toFixed(4)},${e.nz.toFixed(4)})));`).join(' ') + ' return d; }';
 const HEAD = `
-uniform float uTime,uNight,uUnder,uFog; uniform vec3 uSun; uniform vec3 uFishS[12]; uniform sampler2D uShadow; uniform mat4 uShadowM;
+uniform float uTime,uNight,uUnder,uFog,uDusk,uRain; uniform vec3 uSun; uniform vec3 uFishS[12]; uniform sampler2D uShadow; uniform mat4 uShadowM;
 float unpackD(vec4 c){ return dot(c, vec4(1.,1./255.,1./65025.,1./16581375.)); }
 float shadowAt(vec3 P, vec3 N){ vec4 sc=uShadowM*vec4(P+N*.07,1.); vec3 s=sc.xyz; if(s.x<0.||s.x>1.||s.y<0.||s.y>1.||s.z>1.) return 1.; float r=0.;
   for(int i=0;i<4;i++){ vec2 o=vec2(floor(float(i)*.5)-.5, mod(float(i),2.)-.5)*(1.5/1536.); r+=step(s.z-.0016, unpackD(texture2D(uShadow,s.xy+o))); } return r*.25; }
@@ -246,29 +247,36 @@ vec3 skyCol(vec3 d){
   vec3 ngt=mix(vec3(.030,.050,.110), vec3(.004,.008,.030), pow(h,.5));
   vec3 c=mix(day,ngt,uNight);
   float s=max(dot(d,uSun),0.);
-  c+=mix(vec3(1.,.86,.62), vec3(.65,.75,1.), uNight)*(pow(s,700.)*mix(40.,9.,uNight)+pow(s,14.)*mix(.4,.1,uNight));
-  if(d.y>.02){ vec2 q=d.xz/(d.y+.25)*1.6+uTime*.004; float cl=smoothstep(.5,.8,fbm(q*1.5)); c=mix(c, mix(vec3(1.05),vec3(.10,.12,.18),uNight), cl*.75*smoothstep(.02,.2,d.y));
-    c+=step(.9972,hash(floor(d.xz/(d.y+.3)*220.)))*uNight*smoothstep(0.,.3,d.y)*(1.-cl)*1.5; }
+  vec2 dh=d.xz, sh2=uSun.xz; float toward=.5+.5*dot(dh,sh2)/max(length(dh)*length(sh2),.0001);
+  c=mix(c, vec3(1.10,.50,.22)*(.35+.75*toward), uDusk*pow(max(1.-h,.001),2.6)*.9);                 // dawn and dusk glow on the sun's side
+  c=mix(c, vec3(.92,.62,.55)*(1.-uNight*.7), uDusk*.25*smoothstep(.2,.9,h));             // pinkish zenith at sunset
+  c=mix(c, vec3(.50,.53,.57)*(1.-uNight*.88), uRain*.8);                                 // overcast
+  c+=mix(mix(vec3(1.,.86,.62),vec3(1.2,.62,.3),uDusk), vec3(.65,.75,1.), uNight)*(pow(s,700.)*mix(40.,9.,uNight)+pow(s,14.)*mix(.4+uDusk*.6,.1,uNight))*(1.-uRain*.95);
+  if(d.y>.02){ vec2 q=d.xz/(d.y+.25)*1.6+uTime*.004*(1.+uRain*3.); float cl=smoothstep(.5-.42*uRain,.8,fbm(q*1.5));
+    vec3 cc=mix(mix(vec3(1.05),vec3(1.05,.62,.42),uDusk*.8), vec3(.36,.38,.42), uRain); c=mix(c, mix(cc,vec3(.10,.12,.18),uNight), cl*(.75+.2*uRain)*smoothstep(.02,.2,d.y));
+    c+=step(.9972,hash(floor(d.xz/(d.y+.3)*220.)))*uNight*smoothstep(0.,.3,d.y)*(1.-cl)*1.5*(1.-uRain); }
   return c; }
 vec3 waterFog(vec3 dir){
   vec3 deep=mix(vec3(.010,.085,.090), vec3(.003,.012,.032), uNight);
-  vec3 lit=mix(vec3(.085,.40,.37), vec3(.018,.060,.130), uNight);
+  vec3 lit=mix(vec3(.085,.40,.37), vec3(.018,.060,.130), uNight)*(1.-.4*uRain); lit=mix(lit, lit*vec3(1.3,.85,.62), uDusk*.55);
   float up=clamp(dir.y*.5+.5,0.,1.);
   float s=pow(max(dot(dir,uSun),0.),5.);
   return mix(deep,lit,up*up)+lit*s*.7; }
 vec3 lightAt(vec3 P, vec3 N, vec3 alb, float spec, float gloss){
   vec3 sunC=mix(vec3(1.30,1.15,.92), vec3(.20,.28,.48), uNight);
+  sunC=mix(sunC, vec3(1.40,.70,.38), uDusk*.8*(1.-uNight)); sunC*=1.-.72*uRain;
   vec3 skyA=mix(vec3(.36,.46,.60), vec3(.028,.042,.085), uNight);
+  skyA=mix(skyA, vec3(.46,.40,.40)*(1.-uNight), uDusk*.45); skyA=mix(skyA, vec3(.44,.46,.48)*(1.-uNight*.9), uRain*.6);
   vec3 gndA=mix(vec3(.15,.13,.09), vec3(.010,.012,.018), uNight);
   float nl=max(dot(N,uSun),0.);
   vec3 amb=mix(gndA,skyA,N.y*.5+.5);
   vec3 V=normalize(cameraPosition-P);
-  float sh=shadowAt(P,N);
+  float sh=mix(shadowAt(P,N),1.,uRain*.65);
   float sp=pow(max(dot(normalize(uSun+V),N),0.),gloss)*spec*sh;
   if(P.y<0.){
     float att=exp(P.y*.15);
     vec3 tint=mix(vec3(.52,.95,.88), vec3(.40,.60,1.), uNight);
-    float ca=caustic(P.xz*.11+P.y*.03, uTime*.55)*smoothstep(-.25,.5,N.y+.3);
+    float ca=caustic(P.xz*.11+P.y*.03, uTime*.55)*smoothstep(-.25,.5,N.y+.3)*(1.-.85*uRain);
     sh=.25+.75*sh;
     return alb*(amb*.95+sunC*nl*.7*sh)*tint*att + alb*sunC*ca*1.9*att*sh*(1.-uNight*.55) + sunC*sp*att;
   }
@@ -416,12 +424,14 @@ uniform vec4 uRip[8];
 float H(vec2 p){ float t=uTime; float h=sin(p.x*1.7+t*1.3)*.5+sin(p.y*2.3-t*1.1)*.5+sin((p.x+p.y)*3.1+t*1.9)*.25+sin((p.x*.8-p.y*1.3)*4.3-t*2.3)*.18;
   h+=(vnoise(p*3.+t*.4)-.5)*.7+(vnoise(p*7.-t*.6)-.5)*.25;
   for(int i=0;i<8;i++){ vec4 r=uRip[i]; float age=t-r.z; if(age>0.&&age<4.){ float d=length(p-r.xy); float k=d-age*1.7; h+=r.w*sin(k*9.)*exp(-k*k*2.5)*exp(-age*1.1)*5./(1.+d); } }
+  if(uRain>.01){ for(int l=0;l<2;l++){ float fl=float(l); vec2 q=p*(2.3+fl*1.1)+fl*7.31; vec2 c=floor(q), f=fract(q)-.5; float rnd=hash(c+fl*3.7);
+      if(rnd<uRain){ vec2 o=(vec2(hash(c+3.1),hash(c+5.7))-.5)*.5; float per=.55+rnd*.6, age=fract(t/per+rnd*9.), r=length(f-o), ring=age*.42; float k=(r-ring)*10.; h+=sin((r-ring)*30.)*exp(-k*k)*(1.-age)*(1.-age)*.32; } } }
   return h; }
 void main(){
   vec2 p=vW.xz; float e=.05; float h0=H(p);
   vec3 N=normalize(vec3(-(H(p+vec2(e,0.))-h0)/e*.055, 1., -(H(p+vec2(0.,e))-h0)/e*.055));
   vec3 V=normalize(cameraPosition-vW); float d=length(cameraPosition-vW);
-  vec3 sunC=mix(vec3(1.3,1.15,.92), vec3(.3,.4,.7), uNight);
+  vec3 sunC=mix(mix(vec3(1.3,1.15,.92),vec3(1.4,.72,.4),uDusk), vec3(.3,.4,.7), uNight);
   vec3 col; float a;
   if(cameraPosition.y<0.){
     vec3 Nd=-N; vec3 I=-V; vec3 T=refract(I,Nd,1.333); float tir=step(dot(T,T),.0001);
@@ -435,7 +445,7 @@ void main(){
     vec3 R=reflect(-V,N); R.y=abs(R.y); vec3 sk=skyCol(R);
     float fr=.02+.98*pow(1.-max(dot(V,N),0.),5.);
     vec3 deep=mix(vec3(.012,.085,.085), vec3(.003,.012,.03), uNight);
-    col=mix(deep,sk,fr)+sunC*pow(max(dot(R,uSun),0.),350.)*mix(18.,3.,uNight); a=mix(.5,.97,fr);
+    col=mix(deep,sk,fr)+sunC*pow(max(dot(R,uSun),0.),350.)*mix(18.,3.,uNight)*(1.-uRain*.9); a=mix(.5,.97,fr);
   }
   gl_FragColor=vec4(col,a);
 }`;
@@ -588,7 +598,7 @@ const isa = { x: -2, y: .45, z: 7.05, a: -1.57, ta: -1.57, tx: -2, timer: 4, thr
   scene.add(g);
 })();
 const isaPerch = { x: 0, y: 4.2, z: 0, r: 2.9 };
-function updateIsa(dt){ const m = isa; if (playing && role === 'isa') return; m.timer -= dt; m.throwT -= dt;
+function updateIsa(dt){ const m = isa; m.stillT = (!m.walk && m.throwT <= 0) ? (m.stillT || 0) + dt : 0; if (playing && role === 'isa') return; m.timer -= dt; m.throwT -= dt;
   if (m.throwT <= 0){ if (m.timer <= 0){ m.tx = -7 + Math.random() * 10.5; m.timer = 6 + Math.random() * 8; }
     const d = m.tx - m.x; if (Math.abs(d) > .15){ m.x += clamp(d, -1, 1) * 1.3 * dt; m.walk = true; m.phase += dt * 7; m.ta = d > 0 ? 0 : Math.PI; } else { m.walk = false; m.ta = -Math.PI / 2; } }
   else { m.walk = false; m.ta = -Math.PI / 2; }
@@ -713,6 +723,16 @@ function points(n, kind, fill, blend){ const pos = new Float32Array(n * 3), seed
 const motes = points(700, 0, (i, r) => [-9.3 + r() * 18.6, -D + .2 + r() * (D - .3), -5 + r() * 10], THREE.AdditiveBlending);
 const bubbles = points(230, 1, (i, r, s) => { if (i < 120){ const a = r() * TAU, d = Math.sqrt(r()) * .5; return [AER.x + Math.cos(a) * d, 0, AER.z + Math.sin(a) * d]; }
   if (i < 190){ s[3] = 1; return [FALL.x - .1 + r() * .15, 0, FALL.z + (r() - .5) * .3]; } s[3] = 2; return [-9.2 + (r() - .5) * .06, 1.2, FALL.z + (r() - .5) * .16]; });
+const RAIN_V = `attribute vec4 aSeed; uniform float uTime,uPx,uRain; varying float vA;
+void main(){ vec3 p=position; float s=aSeed.x; p.y=mod(aSeed.y*13.-uTime*(10.+s*4.),13.)-.15; p.x+=p.y*.06;
+  vec4 mv=viewMatrix*vec4(p,1.); gl_Position=projectionMatrix*mv; float d=-mv.z;
+  gl_PointSize=clamp(uPx*.32/max(d,.1),2.,120.); vA=step(aSeed.z,uRain)*smoothstep(28.,2.5,d)*smoothstep(.4,0.,-mv.z+.4); }`;
+const RAIN_F = 'varying float vA; void main(){ vec2 c=gl_PointCoord-.5; float a=smoothstep(.09,0.,abs(c.x-c.y*.06))*smoothstep(.5,.1,abs(c.y)); if(a*vA<.01) discard; gl_FragColor=vec4(vec3(.82,.86,.9),a*vA*.75); }';
+const rain = (() => { const n = 2200, pos = new Float32Array(n * 3), seed = new Float32Array(n * 4), r = mulberry(77);
+  for (let i = 0; i < n; i++){ pos.set([-13 + r() * 26, 0, -7.5 + r() * 21], i * 3); seed.set([r(), r(), r(), 0], i * 4); }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('aSeed', new THREE.BufferAttribute(seed, 4));
+  const m = new THREE.Points(g, new THREE.ShaderMaterial({ uniforms: { uTime: U.uTime, uRain: U.uRain, uPx: { value: 800 } }, vertexShader: RAIN_V, fragmentShader: RAIN_F, transparent: true, depthWrite: false }));
+  m.frustumCulled = false; m.renderOrder = 9; m.visible = false; scene.add(m); return m; })();
 const flyPts = points(8, 2, () => [0, -50, 0], THREE.AdditiveBlending); flyPts.renderOrder = 9;
 
 /* ---------- food ---------- */
@@ -724,6 +744,31 @@ function dropFood(x, z, kind, from){ const o = { x, z }; confine(o, .28); if (fo
   food.push(f); return f; }
 function handful(){ const c0 = { x: isa.x + (Math.random() - .5) * 5, z: 4.2 - Math.random() * 4.5 }; confine(c0, .9); const n = 8 + Math.random() * 6 | 0; isa.throwT = 1.3;   // Isabella throws it from the edge
   for (let i = 0; i < n; i++){ const a = Math.random() * TAU, d = Math.sqrt(Math.random()) * 1.5, f = dropFood(c0.x + Math.cos(a) * d, c0.z + Math.sin(a) * d, 'pellet', { x: isa.x, y: 3.3, z: isa.z - .6 }); if (f) f.delay = .35 + Math.random() * .5; } }
+/* ---------- the day: clock, sun and moon, rain ---------- */
+const WX = [['auto', 'Cielo: el día avanza'], ['sol', 'Cielo: soleado'], ['lluvia', 'Cielo: lluvia'], ['tarde', 'Cielo: atardecer'], ['noche', 'Cielo: noche']];
+let wx = 'auto', clock = 10, rainLv = 0, rainOn = false, rainT = 150, lvlNight = 0, cycNight = 0, sunTick = 0;
+try { const w = localStorage.getItem('dani-pond-3d-sky'); if (WX.some(q => q[0] === w)) wx = w; } catch (e) {}
+const DAYLEN = 600;   // seconds of play for a whole day
+const sunDir = new V3(), moonDir = new V3(-.35, .8, -.45).normalize();
+function skyTick(dt){
+  if (wx === 'auto' || wx === 'lluvia') clock = (clock + dt * 24 / DAYLEN) % 24;
+  else clock += ((wx === 'sol' ? 12 : wx === 'tarde' ? 19.15 : 23.5) - clock) * Math.min(1, dt * 2);
+  if (wx === 'auto'){ rainT -= dt; if (rainT <= 0){ rainOn = !rainOn; rainT = rainOn ? 55 + Math.random() * 60 : 140 + Math.random() * 160; } }
+  const want = wx === 'lluvia' ? 1 : wx === 'auto' && rainOn ? 1 : 0; rainLv += (want - rainLv) * Math.min(1, dt * .25); U.uRain.value = rainLv;
+  const a = (clock - 7) / 12.5 * Math.PI, e = Math.sin(a);   // sun elevation: sunrise 7:00, sunset 19:30
+  sunDir.set(-Math.cos(a) * .85 + .2, e, .42).normalize();
+  cycNight = clamp((.06 - e) / .2, 0, 1); cycNight = cycNight * cycNight * (3 - 2 * cycNight);
+  U.uDusk.value = Math.max(0, 1 - Math.abs(e - .07) / .3) ** 1.4 * (1 - cycNight * .6);
+  if ((sunTick -= dt) <= 0){ sunTick = .25;   // light from the sun by day and from the moon by night; never too flat, so shadows stay readable
+    const L = tmpV2.set(sunDir.x, Math.max(sunDir.y, .22), sunDir.z).normalize().lerp(moonDir, cycNight).normalize(); SUN.copy(L);
+    shCam.position.copy(SUN).multiplyScalar(48); shCam.lookAt(0, 0, 0); shCam.updateMatrixWorld();
+    U.uShadowM.value.set(.5, 0, 0, .5, 0, .5, 0, .5, 0, 0, .5, .5, 0, 0, 0, 1).multiply(shCam.projectionMatrix).multiply(shCam.matrixWorldInverse);
+    sunApp.set(SUN.x / 1.333, 0, SUN.z / 1.333); sunApp.y = Math.sqrt(Math.max(0, 1 - sunApp.x * sunApp.x - sunApp.z * sunApp.z)); }
+}
+function skyText(){ const h = Math.floor(clock), m = Math.floor((clock - h) * 60 / 5) * 5, t = clock;
+  const part = t < 6.5 ? 'Noche' : t < 8.3 ? 'Amanecer' : t < 13 ? 'Mañana' : t < 18 ? 'Tarde' : t < 19.6 ? 'Atardecer' : t < 21 ? 'Anochecer' : 'Noche';
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')} · ${part}${rainLv > .3 ? ' · lloviendo' : ''}`; }
+
 let ripI = 0;
 function ripple(x, z, str = 1){ U.uRip.value[ripI++ % 8].set(x, z, U.uTime.value, str); }
 
@@ -785,6 +830,7 @@ const school = [], order = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 9], R0 = mulberry(1234
 order.forEach((ti, i) => { const o = { x: -8 + R0() * 16, z: -4.3 + R0() * 8.8 }; confine(o, .6); const f = makeFish(TYPES[ti], o.x, o.z, R0() * TAU, i + 1); if (i > 9) f.len *= .85; school.push(f); });
 const START = .7, BIG = 1.3;
 let player = null, fishP = null, role = 'fish', catches = 0, delivered = 0, carrying = false, sel = 'kohaku', playing = false, camMode = 'fpv';
+let calmT = 0; const GROUPS = [{ t: 0, x: 0, z: 0, y: -1 }, { t: 0, x: 0, z: 0, y: -1 }];
 let eaten = 0, seeds = 0, level = 0, lives = 3, inv = 0, dash = 0, stamina = 1, feedT = 1.5, time = 0, moved = false, night = 0, banT = 0, lv = null, hit = 0, camT = 9;
 function newLv(){ lv = { g: 0, eaten: 0, seeds: 0, bub: false, fall: false, lap: 0, lapA: null, scare: false, flies: 0 }; }
 newLv();
@@ -884,6 +930,7 @@ const curLevel = () => role !== 'fish' ? roleLv() : (LEVELS[level] || FREE);
 const goalKey = () => { const g = curLevel().goals[lv.g]; return g ? g.k : ''; };
 let lastQ = '';
 function hudSync(){
+  { const t = skyText(); if ($('skyLine').textContent !== t) $('skyLine').textContent = t; }
   const L = curLevel(), g = L.goals[lv.g], q = g ? g.text() : 'Has superado los seis niveles. El estanque es tuyo: nada a tu aire.';
   if (q !== lastQ){ lastQ = q; $('questText').textContent = q; }
   if (role === 'fish') $('questStep').textContent = level < LEVELS.length ? `Nivel ${level + 1} de ${LEVELS.length} · ${L.name}` : L.name;
@@ -942,12 +989,15 @@ function openAlbum(){
   $('album').hidden = false; $('album').scrollTop = 0; $('albumClose').focus();
 }
 $('albumBtn').addEventListener('click', openAlbum);
+const wxLabel = () => { $('wxBtn').textContent = WX.find(q => q[0] === wx)[1]; }; wxLabel();
+$('wxBtn').addEventListener('click', () => { const i = WX.findIndex(q => q[0] === wx); wx = WX[(i + 1) % WX.length][0]; if (wx === 'auto'){ rainOn = false; rainT = 150; } wxLabel(); try { localStorage.setItem('dani-pond-3d-sky', wx); } catch (e) {} });
 $('albumClose').addEventListener('click', () => { saveAlbum(); $('album').hidden = true; $('albumBtn').focus(); });
 
 /* ---------- sound ---------- */
-let AC = null, sndOn = false, master = null, amb = null;
+let AC = null, sndOn = false, master = null, amb = null, rainG = null;
 function audioInit(){ AC = new (window.AudioContext || window.webkitAudioContext)(); master = AC.createGain(); master.connect(AC.destination);
   const buf = AC.createBuffer(1, AC.sampleRate * 2, AC.sampleRate), d = buf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  { const rs2 = AC.createBufferSource(); rs2.buffer = buf; rs2.loop = true; rs2.playbackRate.value = .9; const hp = AC.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 900; rainG = AC.createGain(); rainG.gain.value = 0; rs2.connect(hp); hp.connect(rainG); rainG.connect(master); rs2.start(); }
   const src = AC.createBufferSource(); src.buffer = buf; src.loop = true; amb = AC.createBiquadFilter(); amb.type = 'lowpass'; amb.frequency.value = 420; amb.Q.value = .7;
   const g = AC.createGain(); g.gain.value = .11; src.connect(amb); amb.connect(g); g.connect(master); src.start(); }
 function tone(f0, f1, dur, vol, type, delay = 0){ if (!sndOn) return; const o = AC.createOscillator(), g = AC.createGain(), lp = AC.createBiquadFilter(), t = AC.currentTime + delay; o.type = type || 'sine'; lp.type = 'lowpass'; lp.frequency.value = U.uUnder.value > .5 ? 1100 : 5000;
@@ -984,6 +1034,8 @@ $('camBtn').addEventListener('click', () => { toggleCam(); canvas.focus(); });
 
 /* ---------- actors ---------- */
 const tmpV = new V3(), tmpV2 = new V3();
+function scareFish(f, x, z){ const ax = f.x - x, az = f.z - z, al = hyp(ax, az) || 1, o = { x: f.x + ax / al * 3.5, z: f.z + az / al * 3.5 }; confine(o, .8); f.fx = o.x; f.fz = o.z; f.panic = 1.6 + Math.random() * .8; }
+function scareAt(x, z, r){ for (const f of school) if (!(f === player && playing) && !(f.gone > 0) && hyp(f.x - x, f.z - z) < r) scareFish(f, x, z); }
 function updateTurtle(dt){
   const T = turtle, s0 = curLevel().tsp, was = T.awake; T.awake = s0 > 0;
   if (playing && role === 'turtle'){ T.x = player.x; T.y = player.y; T.z = player.z; T.h = player.h; T.sp = player.sp; T.phase += dt * (2 + T.sp * 4); T.scared -= dt; T.chasing = false; return; }
@@ -1015,7 +1067,7 @@ function updateMaxi(dt){
   if (Math.abs(ds) > .14 && m.barkT <= 0){ const v = clamp(ds * 2.2, -2, 2); m.s += v * dt; m.walk = true; m.phase += dt * (6 + Math.abs(v) * 6); m.ta = v > 0 ? p0.dir : p0.dir + Math.PI; }
   else { m.walk = false; m.ta = focus ? Math.atan2(focus.z - m.z, focus.x - m.x) : p0.inn; }
   const p = mAt(m.s); m.x = p.x; m.z = p.z; m.a += angDiff(m.ta, m.a) * Math.min(1, dt * 8); m.focus = focus;
-  if (turtle.awake && turtle.scared <= 0 && m.barkCd <= 0 && hyp(turtle.x - m.x, turtle.z - m.z) < (curLevel().maxiR || 3.1)){ m.barkT = 1.3; m.barkCd = 14; turtle.scared = 5; woof(); stat('barks'); ripple(m.x + Math.cos(p0.inn) * 1.3, m.z + Math.sin(p0.inn) * 1.3, .8);
+  if (turtle.awake && turtle.scared <= 0 && m.barkCd <= 0 && hyp(turtle.x - m.x, turtle.z - m.z) < (curLevel().maxiR || 3.1)){ m.barkT = 1.3; m.barkCd = 14; turtle.scared = 5; woof(); stat('barks'); scareAt(m.x, m.z, 4.2); ripple(m.x + Math.cos(p0.inn) * 1.3, m.z + Math.sin(p0.inn) * 1.3, .8);
     if (playing){ if (goalKey() === 'maxi') lv.scare = true; banner('¡Guau, guau!', role === 'turtle' ? 'Maxi te ha asustado: aléjate de su borde.' : 'Maxi ha espantado a Mbappe.', 2.2); } }
 }
 function updateFlies(dt){
@@ -1032,7 +1084,7 @@ function updateFlies(dt){
 function update(dt){
   time += dt; U.uTime.value = time; hit = Math.max(0, hit - dt * 1.6);
   banT -= dt; if (banT <= 0) $('banner').classList.add('off');
-  night += ((curLevel().night && playing ? 1 : 0) - night) * Math.min(1, dt * .5); U.uNight.value = night;
+  lvlNight += ((curLevel().night && playing ? 1 : 0) - lvlNight) * Math.min(1, dt * .5); skyTick(dt); night = Math.max(lvlNight, cycNight); U.uNight.value = night;
   feedT -= dt; if (feedT <= 0 && food.length < 46 && !(playing && role === 'isa')){ handful(); feedT = 9 + Math.random() * 5; }
   if (albumDirty && (albumDirty += dt) > 6) saveAlbum();
   if (playing && player && role === 'isa'){ isaPlay(dt); roleTick(dt); }
@@ -1065,20 +1117,41 @@ function update(dt){
   }
   updateTurtle(dt); updateMaxi(dt); updateIsa(dt); updateFlies(dt);
   // the rest of the school
+  for (const g of GROUPS){ g.t -= dt; if (g.t <= 0){ const o = { x: -8.3 + Math.random() * 16.6, z: -4.3 + Math.random() * 8.6 }; confine(o, 1.2); g.x = o.x; g.z = o.z; g.t = 9 + Math.random() * 10;
+      g.y = rainLv > .5 ? -.45 : night > .5 ? -D + 1 : -.6 - Math.random() * (D - 1.6); } }   // each size class roams the pond together
+  const beckon = isa.stillT > 1.2 ? { x: isa.x, z: 4.3 } : null;   // when Isabella stands at the edge, the friendlier fish come up to her
   for (const f of school){ if (f === player && playing) continue;
     if (f.gone > 0){ f.gone -= dt; if (f.gone <= 0){ let best = null, bd = 0; for (const q of [[-8, -4], [8, -3.9], [7, 1.4], [-7.5, 3.9], [1, 3.9]]){ const d = hyp(q[0] - turtle.x, q[1] - turtle.z); if (d > bd){ bd = d; best = q; } } f.x = best[0]; f.z = best[1]; f.y = -1.5; f.gone = 0; } continue; }
-    const L = f.len * f.grow; f.timer -= dt; f.panic -= dt; let best = null, bd = 4.6;
-    for (const p of food){ if (p.state < 1) continue; const d = hyp(p.x - f.x, p.z - f.z, p.y - f.y); if (d < bd){ bd = d; best = p; } }
-    let tx = f.tx, tz = f.tz, ty = f.ty, sp = L * (.28 + f.mood * .08);
-    if (best){ tx = best.x; tz = best.z; ty = best.y - .05; sp = L * (.85 + f.mood * .1); }
-    else if (f.timer <= 0 || hyp(tx - f.x, tz - f.z) < .7){ const o = { x: -8.7 + Math.random() * 17.4, z: -4.5 + Math.random() * 9 }; confine(o, .8); f.tx = tx = o.x; f.tz = tz = o.z; f.ty = ty = -.5 - Math.random() * (D - 1.2); f.timer = 5 + Math.random() * 9; }
+    const L = f.len * f.grow, big = L >= 1.18, idx = school.indexOf(f); f.timer -= dt; f.panic -= dt;
+    if (f.bold === undefined){ const r = mulberry(idx * 97 + 5); f.bold = r(); f.off = r() * TAU; }   // each fish has its own character: bold ones arrive first, shy ones wait
+    const calm = 1 - night * .45;
+    // food: bold fish notice it from further away; shy ones keep back while there is a crowd
+    let best = null, bd = 3 + f.bold * 3;
+    for (const p of food){ if (p.state < 1) continue; const d = hyp(p.x - f.x, p.z - f.z, p.y - f.y); if (d >= bd) continue;
+      if (f.bold < .45 && p.t < 7 * (1 - f.bold)){ let crowd = 0; for (const o of school) if (o !== f && hyp(o.x - p.x, o.z - p.z) < 1.1) crowd++; if (crowd >= 2) continue; }
+      bd = d; best = p; }
+    let tx = f.tx, tz = f.tz, ty = f.ty, sp = L * (.24 + f.bold * .16) * calm, mode = 'wander';
+    if (f.panic > 0){ tx = f.fx; tz = f.fz; ty = -D + .6; sp = 1.8 + L * .5; mode = 'flee'; }
+    else if (best){ tx = best.x; tz = best.z; ty = best.y - .05; sp = L * (.75 + f.bold * .4); mode = 'food'; }
+    else if (beckon && f.bold > .12 && hyp(beckon.x - f.x, beckon.z - f.z) < 11){ tx = beckon.x + Math.cos(f.off) * 1.2; tz = beckon.z - .2 + Math.sin(f.off) * .45; ty = -.28; sp = L * (.75 + f.bold * .4); mode = 'beckon'; }
+    else { const g = GROUPS[big ? 1 : 0], spread = big ? 1.5 : 1.0; const o = { x: g.x + Math.cos(f.off) * spread * (.5 + f.bold), z: g.z + Math.sin(f.off) * spread * .8 }; confine(o, .8); tx = o.x; tz = o.z; ty = g.y + Math.sin(f.off * 3) * .3; }
     let dx = tx - f.x, dz = tz - f.z; const d = hyp(dx, dz) || 1; dx /= d; dz /= d;
+    // school: keep near fish of the same size, swim the same way, and leave a little room
+    { let n = 0, cx = 0, cz = 0, ax = 0, az = 0, sx = 0, sz = 0;
+      for (const o of school){ if (o === f || o.gone > 0 || (o.len * o.grow >= 1.18) !== big) continue; const od = hyp(o.x - f.x, o.z - f.z);
+        if (od < 3.4){ n++; cx += o.x; cz += o.z; ax += Math.cos(o.h); az += Math.sin(o.h); }
+        const room = (L + o.len * o.grow) * .45 + .15; if (od < room){ sx += (f.x - o.x) / (od || .01) * (1 - od / room); sz += (f.z - o.z) / (od || .01) * (1 - od / room); } }
+      if (mode === 'wander' && n){ dx += clamp((cx / n - f.x) * .25, -.6, .6) + ax / n * .5; dz += clamp((cz / n - f.z) * .25, -.6, .6) + az / n * .5; }
+      dx += sx * 1.6; dz += sz * 1.6; }
+    // a shadow passing low overhead (Dorito) sends them diving
+    if (f.panic <= 0 && f.y > -2.7 && (bird.to || (playing && role === 'bird')) && bird.y < 4.2 && hyp(bird.x - f.x, bird.z - f.z) < 2.3) scareFish(f, bird.x, bird.z);
+    if (rainLv > .5 && mode === 'wander' && f.y > -.6 && Math.random() < dt * .25) ripple(f.x + Math.cos(f.h) * L * .4, f.z + Math.sin(f.h) * L * .4, .5);   // rain brings them up to gulp at the surface
     if (turtle.awake && L < 1.18){ const ax = f.x - turtle.x, az = f.z - turtle.z, ad = hyp(ax, az) || 1, cl = curLevel();
-      if (ad < (cl.hide ? 3.8 : 2.4)){ dx += ax / ad * 3; dz += az / ad * 3; sp = (cl.flee || 1.5) + (f.panic > 0 ? 1.1 : 0);
+      if (ad < (cl.hide ? 3.8 : 2.4)){ dx += ax / ad * 3; dz += az / ad * 3; sp = Math.max(sp, (cl.flee || 1.5) + (f.panic > 0 ? 1.1 : 0));
         if (cl.hide){ const ix = ISL.x - turtle.x, iz = ISL.z - turtle.z, il = hyp(ix, iz) || 1, hx = ISL.x + ix / il * (ISL.rx + 1.1) - f.x, hz = ISL.z + iz / il * (ISL.rz + 1.1) - f.z, hl = hyp(hx, hz) || 1; dx += hx / hl * 2.2; dz += hz / hl * 2.2; } } }
-    for (const e of EDGES){ const q = (f.x - e.ax) * e.nx + (f.z - e.az) * e.nz; if (q < 1.5){ const k = (1 - q / 1.5) * 1.6; dx += e.nx * k; dz += e.nz * k; } }
-    const ix = (f.x - ISL.x) / ISL.rx, iz = (f.z - ISL.z) / ISL.rz, iq = hyp(ix, iz);
-    if (iq < 1.5){ const k = (1.5 - iq) * 3.2, tang = f.mood % 2 ? 1 : -1; dx += (ix / iq) * k - (iz / iq) * k * .8 * tang; dz += (iz / iq) * k + (ix / iq) * k * .8 * tang; }
+    for (const e of EDGES){ const q = (f.x - e.ax) * e.nx + (f.z - e.az) * e.nz; if (q < 1.5){ const k = (1 - q / 1.5) * (mode === 'beckon' || mode === 'food' ? .7 : 1.6); dx += e.nx * k; dz += e.nz * k; } }
+    { const ix = (f.x - ISL.x) / ISL.rx, iz = (f.z - ISL.z) / ISL.rz, iq = hyp(ix, iz);
+      if (iq < 1.5){ const k = (1.5 - iq) * 3.2, tang = idx % 2 ? 1 : -1; dx += (ix / iq) * k - (iz / iq) * k * .8 * tang; dz += (iz / iq) * k + (ix / iq) * k * .8 * tang; } }
     moveFish(f, dt, Math.atan2(dz, dx), sp, ty);
   }
   // food: falls, floats, then sinks slowly
@@ -1157,7 +1230,8 @@ function syncScene(dt){
   sky.position.copy(camera.position);
   updateSplats();
   const px = rh / (2 * Math.tan(camera.fov * Math.PI / 360)); motes.material.uniforms.uPx.value = bubbles.material.uniforms.uPx.value = flyPts.material.uniforms.uPx.value = px;
-  motes.visible = U.uUnder.value > .5;
+  motes.visible = U.uUnder.value > .5; rain.visible = rainLv > .02 && U.uUnder.value < .5; rain.material.uniforms.uPx.value = px;
+  if (rainG) rainG.gain.value += (rainLv * (U.uUnder.value > .5 ? .035 : .13) - rainG.gain.value) * Math.min(1, dt * 3);
   if (amb) amb.frequency.value += ((U.uUnder.value > .5 ? 420 : 2600) - amb.frequency.value) * Math.min(1, dt * 6);
 }
 function mark(el, t, show){
@@ -1166,7 +1240,7 @@ function mark(el, t, show){
   if (behind){ x = -x; y = -y; } if (behind || Math.abs(x) > .9 || Math.abs(y) > .86){ const s = 1 / Math.max(Math.abs(x) / .9, Math.abs(y) / .86, .001); if (behind || s < 1){ x *= behind ? Math.max(s, 1e3 * 0 + s) : s; y *= s; x = clamp(x, -.9, .9); y = clamp(y, -.86, .86); if (behind && Math.abs(x) < .9 && Math.abs(y) < .86) x = x < 0 ? -.9 : .9; } }
   el.hidden = false; el.style.transform = `translate(${(x * .5 + .5) * vw}px,${(-y * .5 + .5) * vh}px) rotate(45deg)`;
 }
-const sunApp = new V3(SUN.x / 1.333, 0, SUN.z / 1.333); sunApp.y = Math.sqrt(1 - sunApp.x * sunApp.x - sunApp.z * sunApp.z);
+var sunApp = new V3(SUN.x / 1.333, 0, SUN.z / 1.333); sunApp.y = Math.sqrt(1 - sunApp.x * sunApp.x - sunApp.z * sunApp.z);
 function render(){
   scene.overrideMaterial = shMat; renderer.setClearColor(0xffffff, 1); renderer.setRenderTarget(rtSh); renderer.render(scene, shCam); scene.overrideMaterial = null; renderer.setClearColor(0x000000, 1);
   renderer.setRenderTarget(rtScene); renderer.render(scene, camera);
@@ -1174,7 +1248,7 @@ function render(){
   renderer.setRenderTarget(rtB); renderer.render(pBlurH.s, fsCam);
   renderer.setRenderTarget(rtA); renderer.render(pBlurV.s, fsCam);
   const under = U.uUnder.value > .5, sd = under ? sunApp : SUN; tmpV.copy(camera.position).addScaledVector(sd, 50).project(camera); camera.getWorldDirection(tmpV2); const facing = tmpV2.dot(sd);
-  pRays.u.uSunUv.value.set(tmpV.x * .5 + .5, tmpV.y * .5 + .5); pRays.u.uK.value = facing > .05 ? (under ? 1.9 : .35) * clamp(facing * 1.6, 0, 1) * (1 - night * .5) : 0;
+  pRays.u.uSunUv.value.set(tmpV.x * .5 + .5, tmpV.y * .5 + .5); pRays.u.uK.value = facing > .05 ? (under ? 1.9 : .35) * clamp(facing * 1.6, 0, 1) * (1 - night * .5) * (1 - rainLv * .9) : 0;
   renderer.setRenderTarget(rtR); renderer.render(pRays.s, fsCam);
   pFinal.u.uHit.value = hit; pFinal.u.uFade.value = Math.min(1, pFinal.u.uFade.value + .02);
   renderer.setRenderTarget(null); renderer.render(pFinal.s, fsCam);
@@ -1219,7 +1293,8 @@ function frame(t){
   requestAnimationFrame(frame);
 }
 function boot(d){ if (d && d.sel){ sel = d.sel; eaten = d.eaten | 0; seeds = d.seeds | 0; level = d.level | 0; saved.grow = d.grow; start(); } for (let i = 0; i < 60; i++) update(.05); requestAnimationFrame(frame); }
-window.__koi = { role: r => { role = r; }, roleLevel: n => { rlv[role] = n; roleReset(); levelBanner(); }, extra: () => ({ role, catches, delivered, carrying, rs, rlv, rec, step: document.getElementById('questStep').textContent, small: school.filter(f => !(f.gone > 0) && f.len * f.grow < 1.18).map(f => [f.x, f.y, f.z])[0], isa: [isa.x, isa.z], bird: [bird.x, bird.y, bird.z, bird.perch] }), state: () => ({ playing, level, goal: lv.g, lives, eaten, seeds, sp: player && player.sp, grow: player && player.grow, cam: camMode, under: U.uUnder.value, quality, hdr, food: food.length,
+window.__koi = { role: r => { role = r; }, sky: (w, c) => { wx = w; if (c !== undefined) clock = c; rainLv = w === 'lluvia' ? 1 : 0; sunTick = 0; }, fishInfo: () => school.filter(f => !(f.gone > 0)).map(f => [+f.x.toFixed(2), +f.y.toFixed(2), +f.z.toFixed(2), f.len * f.grow >= 1.18 ? 1 : 0, +(f.panic || 0).toFixed(2)]), isaInfo: () => [isa.x, isa.stillT || 0], skyInfo: () => ({ clock: +clock.toFixed(2), rain: +rainLv.toFixed(2), night: +night.toFixed(2), dusk: +U.uDusk.value.toFixed(2), line: skyText() }),
+  roleLevel: n => { rlv[role] = n; roleReset(); levelBanner(); }, extra: () => ({ role, catches, delivered, carrying, rs, rlv, rec, step: document.getElementById('questStep').textContent, small: school.filter(f => !(f.gone > 0) && f.len * f.grow < 1.18).map(f => [f.x, f.y, f.z])[0], isa: [isa.x, isa.z], bird: [bird.x, bird.y, bird.z, bird.perch] }), state: () => ({ playing, level, goal: lv.g, lives, eaten, seeds, sp: player && player.sp, grow: player && player.grow, cam: camMode, under: U.uUnder.value, quality, hdr, food: food.length,
     p: player && [player.x, player.y, player.z, player.h].map(v => +v.toFixed(2)), turtle: { x: turtle.x, y: turtle.y, z: turtle.z, awake: turtle.awake, chasing: turtle.chasing }, flies: flies.length }),
   view: a => { dbgCam = a; }, splat: () => splats.reduce((a, s) => a + s.n, 0),
   setLevel: n => { level = n; newLv(); lives = 3; levelBanner(); }, put: (x, y, z, h, p) => { player.x = x; player.y = y; player.z = z; player.h = h; player.pitch = p || 0; camT = 9; } };
